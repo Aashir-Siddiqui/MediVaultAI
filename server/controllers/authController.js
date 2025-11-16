@@ -9,7 +9,7 @@ const jwtSecret = process.env.JWT_SECRET;
 const saltRounds = parseInt(process.env.SALT_ROUNDS);
 const cookieName = process.env.COOKIE_NAME;
 const isProduction = process.env.NODE_ENV === "production";
-const cookieExpires = process.env.COOKIE_EXPIRES;
+const cookieExpires = parseInt(process.env.COOKIE_EXPIRES);
 const senderEmail = process.env.SENDER_EMAIL;
 const cookieOptions = {
   httpOnly: true,
@@ -47,7 +47,7 @@ export const register = async (req, res) => {
       from: senderEmail,
       to: email,
       subject: "Welcome to Our Service!",
-      text: `Hello ${name},\n\nThank you for registering ${email} at our service.\n\nBest regards,\nTeam`,
+      text: `Hello ${name},\n\nThank you for registering your account.`,
     };
 
     await transporter.sendMail(mailOptions);
@@ -67,11 +67,16 @@ export const login = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (!user)
+      return res
+        .status(400)
+        .json({ success: false, message: "User already verified" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid credentials" });
 
     const token = jwt.sign({ userId: user._id }, jwtSecret, {
       expiresIn: "7d",
@@ -121,6 +126,84 @@ export const sendVerifyOtp = async (req, res) => {
     return res
       .status(200)
       .json({ success: true, message: "OTP sent to email" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const verifyEmail = async (req, res) => {
+  const userId = req.userId;
+  const { otp } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    if (user.isVerified) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User already verified" });
+    }
+    if (user.verifyOtp === "" || user.verifyOtp !== otp) {
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+    if (user.verifyOtpExpireAt < Date.now()) {
+      return res.status(400).json({ success: false, message: "OTP expired" });
+    }
+
+    user.isVerified = true;
+    user.verifyOtp = "";
+    user.verifyOtpExpireAt = 0;
+
+    await user.save();
+    return res
+      .status(200)
+      .json({ success: true, message: "Email verified successfully" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const isAuthenticated = (req, res) => {
+  try {
+    res.status(200).json({ success: true, message: "User is authenticated" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const sendResetOtp = async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Email is required" });
+  }
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetOtpExpireAt = Date.now() + 10 * 60 * 1000;
+
+    user.resetOtp = resetOtp;
+    user.resetOtpExpireAt = resetOtpExpireAt;
+    await user.save();
+
+    const mailOptions = {
+      from: senderEmail,
+      to: user.email,
+      subject: "Your Password Reset OTP",
+      text: `Hello ${user.name},\n\nYour OTP for password reset is: ${resetOtp}\nIt will expire in 10 minutes.\n\nBest regards,\nTeam`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Reset OTP sent to email" });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Server error" });
   }
