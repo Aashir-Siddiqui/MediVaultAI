@@ -55,13 +55,13 @@ const imageFilter = (req, file, cb) => {
   }
 };
 
-// Main upload configuration
+// Main upload configuration (for profile pictures)
 export const upload = multer({
   storage: storage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
-  fileFilter: imageFilter, // For profile pictures
+  fileFilter: imageFilter,
 });
 
 // Upload configuration for medical reports (images and PDFs)
@@ -80,7 +80,7 @@ export const handleMulterError = (err, req, res, next) => {
       return res.status(400).json({
         success: false,
         message:
-          "File size too large. Maximum size is 10MB for profile pictures.",
+          "File size too large. Maximum size is 20MB for medical reports.",
       });
     }
     return res.status(400).json({

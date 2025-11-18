@@ -1,3 +1,4 @@
+// models/FamilyMember.js
 import mongoose from "mongoose";
 
 const familyMemberSchema = new mongoose.Schema(
@@ -6,12 +7,14 @@ const familyMemberSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true, // Index for faster queries
     },
 
     name: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
 
     relation: {
@@ -57,7 +60,37 @@ const familyMemberSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-export default mongoose.model("FamilyMember", familyMemberSchema);
+// Compound index for faster queries by userId and relation
+familyMemberSchema.index({ userId: 1, relation: 1 });
+
+// Index for date queries
+familyMemberSchema.index({ createdAt: -1 });
+
+// Virtual field to calculate age
+familyMemberSchema.virtual("age").get(function () {
+  const today = new Date();
+  const birthDate = new Date(this.dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+
+  return age;
+});
+
+// Ensure virtuals are included in JSON
+familyMemberSchema.set("toJSON", { virtuals: true });
+familyMemberSchema.set("toObject", { virtuals: true });
+
+const FamilyMember = mongoose.model("FamilyMember", familyMemberSchema);
+export default FamilyMember;

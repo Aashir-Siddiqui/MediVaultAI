@@ -7,6 +7,8 @@ import connectDB from "./config/mongodb.js";
 import dotenv from "dotenv";
 import authRouter from "./routes/authRoutes.js";
 import userRouter from "./routes/userRoutes.js";
+import familyRouter from "./routes/familyRoutes.js";
+import reportRouter from "./routes/reportRoutes.js";
 import { generalLimiter } from "./middleware/rateLimiters.js";
 
 dotenv.config();
@@ -55,6 +57,8 @@ app.get("/health", (req, res) => {
 // API routes
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
+app.use("/api/family", familyRouter);
+app.use("/api/reports", reportRouter);
 
 // 404 handler
 app.use((req, res) => {
