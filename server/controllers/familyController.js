@@ -1,9 +1,7 @@
-// controllers/familyController.js
-import FamilyMember from "../models/familyMembers.js";
+import FamilyMember from "../models/FamilyMembers.js";
 import cloudinary from "../config/cloudinary.js";
 import fs from "fs";
 
-// Add new family member
 export const addFamilyMember = async (req, res) => {
   try {
     const userId = req.userId;
@@ -33,7 +31,6 @@ export const addFamilyMember = async (req, res) => {
       }
     }
 
-    // Create family member
     const familyMember = await FamilyMember.create({
       userId,
       name,
@@ -60,7 +57,6 @@ export const addFamilyMember = async (req, res) => {
   }
 };
 
-// Get all family members
 export const getAllFamilyMembers = async (req, res) => {
   try {
     const userId = req.userId;

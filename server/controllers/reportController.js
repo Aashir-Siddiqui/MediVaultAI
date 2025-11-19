@@ -1,15 +1,14 @@
 // controllers/reportController.js
-import MedicalReport from "../models/medicalReport.js";
-import FamilyMember from "../models/familyMembers.js";
+import MedicalReport from "../models/MedicalReport.js";
+import FamilyMember from "../models/FamilyMembers.js";
 import cloudinary from "../config/cloudinary.js";
 import fs from "fs";
 
-// Upload medical report - FIXED
+// Upload medical report - FIXED with PUBLIC access
 export const uploadReport = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Log for debugging
     console.log("Upload Report Request:", {
       body: req.body,
       file: req.file
@@ -50,20 +49,27 @@ export const uploadReport = async (req, res) => {
       });
     }
 
-    // Upload to Cloudinary
+    // Upload to Cloudinary with PUBLIC access (FIXED)
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "health-records/medical-reports",
-      resource_type: "auto", // Supports images and PDFs
+      resource_type: "auto",
+      type: "upload", // Public upload
+      access_mode: "public", // Make publicly accessible
+    });
+
+    console.log("Uploaded to Cloudinary:", {
+      url: result.secure_url,
+      publicId: result.public_id,
+      resourceType: result.resource_type,
     });
 
     // Delete temporary file
     fs.unlinkSync(req.file.path);
 
-    // Process tags - multer sends as string, convert to array
+    // Process tags
     let tagsArray = [];
     if (tags) {
       if (typeof tags === "string") {
-        // If comma-separated string, split it
         tagsArray = tags
           .split(",")
           .map((tag) => tag.trim())

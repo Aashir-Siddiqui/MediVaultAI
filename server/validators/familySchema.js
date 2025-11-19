@@ -2,6 +2,7 @@
 import { z } from "zod";
 
 const phoneRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
+const objectIdRegex = /^[a-f\d]{24}$/i;
 
 // Add family member validation
 export const addFamilyMemberSchema = z.object({
@@ -58,7 +59,7 @@ export const addFamilyMemberSchema = z.object({
   query: z.object({}).optional(),
 });
 
-// Update family member validation (all fields optional except what user wants to update)
+// Update family member validation
 export const updateFamilyMemberSchema = z.object({
   body: z.object({
     name: z
@@ -80,12 +81,6 @@ export const updateFamilyMemberSchema = z.object({
         const today = new Date();
         return dob < today;
       }, "Date of birth must be in the past")
-      .refine((date) => {
-        if (!date) return true;
-        const dob = new Date(date);
-        const minDate = new Date("1900-01-01");
-        return dob > minDate;
-      }, "Invalid date of birth")
       .optional(),
 
     gender: z.enum(["Male", "Female", "Other"]).optional(),
@@ -107,21 +102,10 @@ export const updateFamilyMemberSchema = z.object({
       .optional(),
   }),
   params: z.object({
-    id: z.string().min(1, "Family member ID is required"),
+    id: z
+      .string()
+      .min(1, "Family member ID is required")
+      .regex(objectIdRegex, "Invalid MongoDB ObjectId format"),
   }),
   query: z.object({}).optional(),
-});
-
-// Query filters validation
-export const getFamilyMembersQuerySchema = z.object({
-  body: z.object({}).optional(),
-  params: z.object({}).optional(),
-  query: z
-    .object({
-      relation: z
-        .enum(["Self", "Father", "Mother", "Spouse", "Child", "Other"])
-        .optional(),
-      gender: z.enum(["Male", "Female", "Other"]).optional(),
-    })
-    .optional(),
 });

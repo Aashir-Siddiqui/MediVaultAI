@@ -9,6 +9,7 @@ import authRouter from "./routes/authRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import familyRouter from "./routes/familyRoutes.js";
 import reportRouter from "./routes/reportRoutes.js";
+import analysisRouter from "./routes/analysisRoutes.js";
 import { generalLimiter } from "./middleware/rateLimiters.js";
 
 dotenv.config();
@@ -44,6 +45,7 @@ app.use(
 
 // Serve static files
 app.use("/uploads", express.static("public/uploads"));
+app.use("/temp", express.static("public/temp"));
 
 // Health check route
 app.get("/health", (req, res) => {
@@ -59,6 +61,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/family", familyRouter);
 app.use("/api/reports", reportRouter);
+app.use("/api/analysis", analysisRouter);
 
 // 404 handler
 app.use((req, res) => {
