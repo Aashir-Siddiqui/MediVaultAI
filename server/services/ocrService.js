@@ -1,9 +1,7 @@
 // services/ocrService.js
 import Tesseract from "tesseract.js";
-import { PDFParse } from "pdf-parse"; // FIXED import
 import fs from "fs";
-import axios from "axios";
-import cloudinary from "../config/cloudinary.js";
+import https from "https";
 
 // Extract text from image using Tesseract OCR
 export const extractTextFromImage = async (imagePath) => {
@@ -28,93 +26,89 @@ export const extractTextFromImage = async (imagePath) => {
   }
 };
 
-// Extract text from PDF - FIXED
-export const extractTextFromPDF = async (pdfPath) => {
-  try {
-    console.log("Starting PDF text extraction:", pdfPath);
+// Download file from URL
+export const downloadFile = async (url, filepath) => {
+  return new Promise((resolve, reject) => {
+    console.log("📥 Downloading file from URL:", url);
 
-    const dataBuffer = fs.readFileSync(pdfPath);
-    const data = await PDFParse(dataBuffer); // FIXED: Direct call
+    const file = fs.createWriteStream(filepath);
 
-    console.log("✅ PDF text extraction completed");
-    console.log("Extracted text length:", data.text?.length || 0);
-
-    if (!data.text || data.text.trim().length === 0) {
-      console.warn(
-        "⚠️  No text found in PDF. This might be an image-based PDF."
-      );
-      throw new Error(
-        "No text content found in PDF. This appears to be an image-based PDF."
-      );
-    }
-
-    return data.text.trim();
-  } catch (error) {
-    console.error("❌ PDF extraction error:", error);
-    throw new Error(`Failed to extract text from PDF: ${error.message}`);
-  }
-};
-
-// Download from Cloudinary using SDK
-export const downloadFromCloudinary = async (
-  publicId,
-  filepath,
-  resourceType = "auto"
-) => {
-  try {
-    console.log("📥 Downloading from Cloudinary:", publicId);
-
-    // Generate URL without authentication (for public files)
-    const url = cloudinary.url(publicId, {
-      resource_type: resourceType,
-      secure: true,
-      type: "upload", // Ensure it's looking for upload type
-    });
-
-    console.log("🔗 Cloudinary URL:", url);
-
-    const response = await axios({
-      method: "GET",
-      url: url,
-      responseType: "stream",
-      timeout: 60000,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Health Records System)",
+    const request = https.get(
+      url,
+      {
+        timeout: 60000,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Health Records System)",
+        },
       },
-      maxRedirects: 5,
-    });
-
-    const writer = fs.createWriteStream(filepath);
-    response.data.pipe(writer);
-
-    return new Promise((resolve, reject) => {
-      writer.on("finish", () => {
-        console.log("✅ File downloaded successfully");
-        resolve(filepath);
-      });
-
-      writer.on("error", (err) => {
-        console.error("❌ Writer error:", err);
-        if (fs.existsSync(filepath)) {
+      (response) => {
+        // Handle redirects
+        if (response.statusCode === 301 || response.statusCode === 302) {
+          file.close();
           fs.unlinkSync(filepath);
+          console.log("🔄 Following redirect to:", response.headers.location);
+          return downloadFile(response.headers.location, filepath)
+            .then(resolve)
+            .catch(reject);
         }
-        reject(err);
-      });
+
+        if (response.statusCode !== 200) {
+          file.close();
+          fs.unlinkSync(filepath);
+          return reject(
+            new Error(`Failed to download: HTTP ${response.statusCode}`)
+          );
+        }
+
+        response.pipe(file);
+
+        file.on("finish", () => {
+          file.close();
+          const stats = fs.statSync(filepath);
+          console.log(
+            "✅ File downloaded successfully, size:",
+            stats.size,
+            "bytes"
+          );
+
+          if (stats.size === 0) {
+            fs.unlinkSync(filepath);
+            return reject(new Error("Downloaded file is empty"));
+          }
+
+          resolve(filepath);
+        });
+      }
+    );
+
+    request.on("error", (err) => {
+      file.close();
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
+      }
+      reject(err);
     });
-  } catch (error) {
-    console.error("❌ Cloudinary download error:", error.message);
-    if (error.response) {
-      console.error("Response status:", error.response.status);
-      console.error("Response data:", error.response.data);
-    }
-    if (fs.existsSync(filepath)) {
-      fs.unlinkSync(filepath);
-    }
-    throw new Error(`Failed to download from Cloudinary: ${error.message}`);
-  }
+
+    request.on("timeout", () => {
+      request.destroy();
+      file.close();
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
+      }
+      reject(new Error("Download timeout"));
+    });
+
+    file.on("error", (err) => {
+      file.close();
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
+      }
+      reject(err);
+    });
+  });
 };
 
-// Main function to extract text from any file - OPTIMIZED
+// Main function to extract text from image file
 export const extractTextFromFile = async (
   fileUrl,
   mimeType,
@@ -123,6 +117,11 @@ export const extractTextFromFile = async (
   let tempFilePath = null;
 
   try {
+    // Verify it's an image
+    if (!mimeType.includes("image")) {
+      throw new Error("Only image files are supported");
+    }
+
     // Create temp directory
     const tempDir = "./public/temp";
     if (!fs.existsSync(tempDir)) {
@@ -132,33 +131,18 @@ export const extractTextFromFile = async (
     // Generate temp file path
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(7);
-    const extension = mimeType.includes("pdf") ? "pdf" : "jpg";
+    const extension = "jpg";
     tempFilePath = `${tempDir}/temp_${timestamp}_${random}.${extension}`;
 
-    console.log("📄 Processing file:", {
+    console.log("📄 Processing image file:", {
       mimeType,
-      hasPublicId: !!publicId,
-      extension,
+      fileUrl: fileUrl.substring(0, 50) + "...",
     });
 
-    // Download file
-    if (publicId) {
-      try {
-        console.log("🔄 Attempting Cloudinary SDK download");
-        const resourceType = mimeType.includes("pdf") ? "raw" : "image";
-        await downloadFromCloudinary(publicId, tempFilePath, resourceType);
-      } catch (cloudinaryError) {
-        console.warn("⚠️  Cloudinary SDK failed, trying direct URL");
-        console.error("Cloudinary error:", cloudinaryError.message);
+    // Download file using direct URL
+    await downloadFile(fileUrl, tempFilePath);
 
-        // Fallback: direct URL download
-        await downloadFromCloudinary(publicId, tempFilePath, "auto");
-      }
-    } else {
-      throw new Error("PublicId is required for file download");
-    }
-
-    // Verify file
+    // Verify file exists and has content
     if (!fs.existsSync(tempFilePath)) {
       throw new Error("File download failed - file not found");
     }
@@ -170,20 +154,15 @@ export const extractTextFromFile = async (
       throw new Error("Downloaded file is empty");
     }
 
-    let extractedText = "";
-
-    // Extract text based on file type
-    if (mimeType.includes("pdf")) {
-      console.log("📖 Processing as PDF");
-      extractedText = await extractTextFromPDF(tempFilePath);
-    } else if (mimeType.includes("image")) {
-      console.log("🖼️  Processing as Image with OCR");
-      extractedText = await extractTextFromImage(tempFilePath);
-    } else {
-      throw new Error("Unsupported file type for text extraction");
-    }
+    // Extract text using OCR
+    console.log("🖼️ Processing image with OCR");
+    const extractedText = await extractTextFromImage(tempFilePath);
 
     console.log("✅ Text extraction successful. Length:", extractedText.length);
+
+    if (!extractedText || extractedText.length < 50) {
+      throw new Error("Insufficient text extracted from image");
+    }
 
     return extractedText;
   } catch (error) {
@@ -194,9 +173,9 @@ export const extractTextFromFile = async (
     if (tempFilePath && fs.existsSync(tempFilePath)) {
       try {
         fs.unlinkSync(tempFilePath);
-        console.log("🗑️  Temp file deleted");
+        console.log("🗑️ Temp file deleted");
       } catch (err) {
-        console.error("⚠️  Error deleting temp file:", err);
+        console.error("⚠️ Error deleting temp file:", err);
       }
     }
   }
@@ -209,5 +188,6 @@ export const cleanExtractedText = (text) => {
   return text
     .replace(/\s+/g, " ") // Multiple spaces → single space
     .replace(/\n+/g, "\n") // Multiple newlines → single newline
+    .replace(/\r/g, "") // Remove carriage returns
     .trim();
 };

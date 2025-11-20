@@ -2,49 +2,121 @@
 import { getGeminiModel, getGeminiVisionModel } from "../config/gemini.js";
 import fs from "fs";
 
-// Create medical analysis prompt
+// Create medical analysis prompt - OPTIMIZED
 const createMedicalAnalysisPrompt = (extractedText, patientInfo) => {
-  return `You are an expert medical AI assistant. Analyze the following medical report and provide a comprehensive analysis.
+  // Clean the extracted text
+  const cleanText = extractedText
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .substring(0, 6000); // Reasonable limit
 
-PATIENT INFORMATION:
-- Name: ${patientInfo.name}
-- Age: ${patientInfo.age}
-- Gender: ${patientInfo.gender}
-- Blood Group: ${patientInfo.bloodGroup || "Not specified"}
-- Known Allergies: ${patientInfo.allergies?.join(", ") || "None"}
-- Chronic Conditions: ${patientInfo.chronicConditions?.join(", ") || "None"}
+  return `You are a medical AI assistant. Analyze this medical report and return ONLY a valid JSON object.
 
-MEDICAL REPORT TEXT:
-${extractedText}
+PATIENT:
+Name: ${patientInfo.name}
+Age: ${patientInfo.age}
+Gender: ${patientInfo.gender}
+Blood Group: ${patientInfo.bloodGroup || "Not specified"}
+Allergies: ${patientInfo.allergies?.join(", ") || "None"}
+Chronic Conditions: ${patientInfo.chronicConditions?.join(", ") || "None"}
 
-Please provide a detailed analysis in the following JSON format:
+REPORT TEXT:
+${cleanText}
+
+Return analysis in this exact JSON structure with NO additional text:
 {
-  "summary": "A brief 2-3 sentence overview of the report",
+  "summary": "Brief 2-3 sentence overview of the report findings",
   "keyFindings": ["Finding 1", "Finding 2", "Finding 3"],
   "abnormalValues": [
     {
-      "parameter": "Parameter name",
-      "value": "Actual value",
+      "parameter": "Test name",
+      "value": "Result value",
       "normalRange": "Normal range",
-      "severity": "Normal/Slightly Abnormal/Abnormal/Critical"
+      "severity": "Normal"
     }
   ],
   "recommendations": ["Recommendation 1", "Recommendation 2"],
-  "healthInsights": "Detailed health insights based on the report",
+  "healthInsights": "Overall health insights in one paragraph",
   "nextSteps": ["Next step 1", "Next step 2"]
 }
 
-IMPORTANT GUIDELINES:
-- Be accurate and professional
-- Use simple, clear language that patients can understand
-- Focus on actionable insights
-- Do NOT provide medical diagnosis or prescribe medications
-- Always recommend consulting healthcare professionals for serious concerns
-- If values are abnormal, explain what they might indicate (not diagnose)
-- Provide lifestyle and dietary suggestions when appropriate
-- Be empathetic and supportive in tone
+RULES:
+- Return ONLY valid JSON
+- NO markdown, NO code blocks, NO explanations
+- Keep strings concise to avoid truncation
+- Severity MUST be: "Normal", "Slightly Abnormal", "Abnormal", or "Critical"
+- All arrays must have at least one item
+- Use simple medical language
+- Do NOT diagnose or prescribe
+- Always recommend consulting healthcare professionals`;
+};
 
-Return ONLY the JSON object, no additional text.`;
+// Robust JSON parser with fallback
+const parseGeminiResponse = (responseText) => {
+  try {
+    // First, try direct parse (if responseMimeType worked)
+    try {
+      const parsed = JSON.parse(responseText);
+      if (parsed.summary) {
+        return parsed;
+      }
+    } catch (e) {
+      // Continue to cleaning if direct parse fails
+    }
+
+    // Clean the response
+    let cleanedText = responseText
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*/gi, "")
+      .trim();
+
+    // Extract JSON object
+    const firstBrace = cleanedText.indexOf("{");
+    const lastBrace = cleanedText.lastIndexOf("}");
+
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error("No valid JSON object found in response");
+    }
+
+    cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
+
+    // Try to fix common JSON errors
+    cleanedText = cleanedText
+      .replace(/,\s*}/g, "}") // Remove trailing commas
+      .replace(/,\s*]/g, "]");
+
+    // Parse
+    const parsed = JSON.parse(cleanedText);
+
+    // Validate required fields
+    if (!parsed.summary) {
+      throw new Error("Missing summary field");
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error("JSON Parse Error:");
+    console.error("Error:", error.message);
+    console.error("Response:", responseText.substring(0, 500));
+
+    // Return fallback structure
+    return {
+      summary:
+        "Analysis completed but response formatting failed. Please consult your healthcare provider for detailed interpretation.",
+      keyFindings: ["Report analysis encountered formatting issues"],
+      abnormalValues: [],
+      recommendations: [
+        "Please consult your healthcare provider for detailed analysis",
+      ],
+      healthInsights:
+        "Unable to parse complete analysis. Recommend professional medical review.",
+      nextSteps: [
+        "Schedule an appointment with your doctor",
+        "Bring this report for professional review",
+      ],
+    };
+  }
 };
 
 // Analyze medical report with Gemini
@@ -59,54 +131,60 @@ export const analyzeReportWithGemini = async (
     }
 
     console.log("Starting Gemini analysis for report type:", reportType);
+    console.log("Extracted text length:", extractedText.length);
 
     const model = getGeminiModel();
     const prompt = createMedicalAnalysisPrompt(extractedText, patientInfo);
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    let analysisText = response.text();
+    const analysisText = response.text();
 
     console.log("Gemini analysis completed");
+    console.log("Response length:", analysisText.length);
+    console.log("Response preview:", analysisText.substring(0, 200));
 
-    // Clean the response (remove markdown code blocks if present)
-    analysisText = analysisText
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
-
-    // Parse JSON response
-    let analysis;
-    try {
-      analysis = JSON.parse(analysisText);
-    } catch (parseError) {
-      console.error("Failed to parse Gemini response as JSON:", parseError);
-      // Try to extract JSON from text
-      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        analysis = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Failed to parse AI analysis response");
-      }
-    }
+    // Parse with robust error handling
+    const analysis = parseGeminiResponse(analysisText);
 
     // Validate and structure the response
     const structuredAnalysis = {
       summary: analysis.summary || "Analysis completed successfully",
-      keyFindings: Array.isArray(analysis.keyFindings)
-        ? analysis.keyFindings
-        : [],
+      keyFindings:
+        Array.isArray(analysis.keyFindings) && analysis.keyFindings.length > 0
+          ? analysis.keyFindings
+          : ["No specific findings identified"],
       abnormalValues: Array.isArray(analysis.abnormalValues)
-        ? analysis.abnormalValues
+        ? analysis.abnormalValues.map((val) => ({
+            parameter: val.parameter || "Unknown",
+            value: val.value || "N/A",
+            normalRange: val.normalRange || "N/A",
+            severity: [
+              "Normal",
+              "Slightly Abnormal",
+              "Abnormal",
+              "Critical",
+            ].includes(val.severity)
+              ? val.severity
+              : "Normal",
+          }))
         : [],
-      recommendations: Array.isArray(analysis.recommendations)
-        ? analysis.recommendations
-        : [],
-      healthInsights: analysis.healthInsights || "",
-      nextSteps: Array.isArray(analysis.nextSteps) ? analysis.nextSteps : [],
+      recommendations:
+        Array.isArray(analysis.recommendations) &&
+        analysis.recommendations.length > 0
+          ? analysis.recommendations
+          : ["Consult with your healthcare provider"],
+      healthInsights:
+        analysis.healthInsights || "Please review with your doctor",
+      nextSteps:
+        Array.isArray(analysis.nextSteps) && analysis.nextSteps.length > 0
+          ? analysis.nextSteps
+          : ["Schedule a follow-up with your doctor"],
       analyzedAt: new Date(),
       isAnalyzed: true,
     };
+
+    console.log("✅ Analysis structured successfully");
 
     return structuredAnalysis;
   } catch (error) {
@@ -133,45 +211,28 @@ export const analyzeImageWithGeminiVision = async (imagePath, patientInfo) => {
       },
     };
 
-    const prompt = `Analyze this medical report image and extract all relevant information. 
-Patient: ${patientInfo.name}, Age: ${patientInfo.age}, Gender: ${patientInfo.gender}
+    const prompt = `Analyze this medical report image for patient: ${patientInfo.name}, Age: ${patientInfo.age}, Gender: ${patientInfo.gender}
 
-Provide analysis in this JSON format:
+Return ONLY valid JSON with this structure:
 {
-  "extractedText": "All text visible in the image",
+  "extractedText": "All visible text from the image",
   "summary": "Brief summary of findings",
   "keyFindings": ["Finding 1", "Finding 2"],
-  "abnormalValues": [{"parameter": "Name", "value": "Value", "normalRange": "Range", "severity": "Level"}],
+  "abnormalValues": [{"parameter": "Name", "value": "Value", "normalRange": "Range", "severity": "Normal"}],
   "recommendations": ["Recommendation 1"],
-  "healthInsights": "Insights",
-  "nextSteps": ["Step 1"]
+  "healthInsights": "Health insights paragraph",
+  "nextSteps": ["Next step 1"]
 }
 
-Return only JSON, no additional text.`;
+Keep responses concise. NO markdown blocks.`;
 
     const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
-    let analysisText = response.text();
+    const analysisText = response.text();
 
     console.log("Gemini Vision analysis completed");
 
-    // Clean and parse response
-    analysisText = analysisText
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
-
-    let analysis;
-    try {
-      analysis = JSON.parse(analysisText);
-    } catch (parseError) {
-      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        analysis = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Failed to parse Vision AI response");
-      }
-    }
+    const analysis = parseGeminiResponse(analysisText);
 
     return {
       extractedText: analysis.extractedText || "",
@@ -201,27 +262,24 @@ export const generateHealthSummary = async (reports, patientInfo) => {
 
     const reportsText = reports
       .map((report, index) => {
-        return `
-REPORT ${index + 1}:
-Type: ${report.reportType}
-Date: ${new Date(report.reportDate).toLocaleDateString()}
-Summary: ${report.aiAnalysis?.summary || "Not analyzed"}
-Key Findings: ${report.aiAnalysis?.keyFindings?.join(", ") || "None"}
-`;
+        return `REPORT ${index + 1}: ${report.reportType} (${new Date(
+          report.reportDate
+        ).toLocaleDateString()}) - ${
+          report.aiAnalysis?.summary || "Not analyzed"
+        }`;
       })
-      .join("\n---\n");
+      .join("\n");
 
-    const prompt = `You are a medical AI assistant. Review the following medical reports for a patient and provide a comprehensive health summary.
+    const prompt = `Create a comprehensive health summary for this patient.
 
-PATIENT INFORMATION:
-- Name: ${patientInfo.name}
-- Age: ${patientInfo.age}
-- Gender: ${patientInfo.gender}
-- Blood Group: ${patientInfo.bloodGroup || "Not specified"}
-- Allergies: ${patientInfo.allergies?.join(", ") || "None"}
-- Chronic Conditions: ${patientInfo.chronicConditions?.join(", ") || "None"}
+PATIENT: ${patientInfo.name}, Age: ${patientInfo.age}, Gender: ${
+      patientInfo.gender
+    }
+Blood Group: ${patientInfo.bloodGroup || "Not specified"}
+Allergies: ${patientInfo.allergies?.join(", ") || "None"}
+Chronic Conditions: ${patientInfo.chronicConditions?.join(", ") || "None"}
 
-MEDICAL REPORTS:
+REPORTS ANALYZED:
 ${reportsText}
 
 Provide a comprehensive health summary including:
@@ -231,7 +289,7 @@ Provide a comprehensive health summary including:
 4. Positive developments
 5. General recommendations
 
-Keep it clear, concise, and patient-friendly. Avoid medical jargon where possible.`;
+Keep it clear, concise, and patient-friendly.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -257,18 +315,18 @@ export const askQuestionAboutReport = async (
 
     const model = getGeminiModel();
 
-    const prompt = `You are a medical AI assistant helping a patient understand their medical report.
+    const prompt = `You are helping a patient understand their medical report.
 
 PATIENT: ${patientInfo.name}, ${patientInfo.age} years old, ${
       patientInfo.gender
     }
 
-REPORT ANALYSIS:
-${JSON.stringify(reportAnalysis, null, 2)}
+REPORT SUMMARY: ${reportAnalysis.summary}
+KEY FINDINGS: ${reportAnalysis.keyFindings?.join(", ")}
 
 PATIENT QUESTION: ${question}
 
-Provide a clear, empathetic, and informative answer. Use simple language that a non-medical person can understand. Always remind them to consult healthcare professionals for medical advice.`;
+Provide a clear, empathetic answer in simple language. Always recommend consulting healthcare professionals for medical advice.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;

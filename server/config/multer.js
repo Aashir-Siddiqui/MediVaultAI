@@ -22,28 +22,6 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter for images and PDFs
-const fileFilter = (req, file, cb) => {
-  const allowedMimes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/gif",
-    "application/pdf",
-  ];
-
-  if (allowedMimes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(
-      new Error(
-        "Invalid file type. Only JPEG, PNG, GIF, and PDF files are allowed."
-      ),
-      false
-    );
-  }
-};
-
 // File filter for images only
 const imageFilter = (req, file, cb) => {
   const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
@@ -51,7 +29,12 @@ const imageFilter = (req, file, cb) => {
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Invalid file type. Only image files are allowed."), false);
+    cb(
+      new Error(
+        "Invalid file type. Only JPEG, PNG, and GIF images are allowed."
+      ),
+      false
+    );
   }
 };
 
@@ -64,13 +47,13 @@ export const upload = multer({
   fileFilter: imageFilter,
 });
 
-// Upload configuration for medical reports (images and PDFs)
+// Upload configuration for medical reports (images only)
 export const reportUpload = multer({
   storage: storage,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB limit for medical reports
+    fileSize: 10 * 1024 * 1024, // 10MB limit for medical report images
   },
-  fileFilter: fileFilter,
+  fileFilter: imageFilter,
 });
 
 // Handle multer errors
@@ -80,7 +63,7 @@ export const handleMulterError = (err, req, res, next) => {
       return res.status(400).json({
         success: false,
         message:
-          "File size too large. Maximum size is 20MB for medical reports.",
+          "File size too large. Maximum size is 10MB for medical report images.",
       });
     }
     return res.status(400).json({

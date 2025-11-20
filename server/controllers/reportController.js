@@ -4,7 +4,7 @@ import FamilyMember from "../models/FamilyMembers.js";
 import cloudinary from "../config/cloudinary.js";
 import fs from "fs";
 
-// Upload medical report - FIXED with PUBLIC access
+// Upload medical report - IMAGES ONLY
 export const uploadReport = async (req, res) => {
   try {
     const userId = req.userId;
@@ -12,7 +12,11 @@ export const uploadReport = async (req, res) => {
     console.log("Upload Report Request:", {
       body: req.body,
       file: req.file
-        ? { name: req.file.originalname, size: req.file.size }
+        ? {
+            name: req.file.originalname,
+            size: req.file.size,
+            mimetype: req.file.mimetype,
+          }
         : null,
     });
 
@@ -30,7 +34,16 @@ export const uploadReport = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: "Please upload a report file",
+        message: "Please upload a report image",
+      });
+    }
+
+    // Verify it's an image
+    if (!req.file.mimetype.startsWith("image/")) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "Only image files are allowed (JPEG, PNG, GIF)",
       });
     }
 
@@ -49,19 +62,30 @@ export const uploadReport = async (req, res) => {
       });
     }
 
-    // Upload to Cloudinary with PUBLIC access (FIXED)
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "health-records/medical-reports",
-      resource_type: "auto",
-      type: "upload", // Public upload
-      access_mode: "public", // Make publicly accessible
+    console.log("Uploading image to Cloudinary:", {
+      mimetype: req.file.mimetype,
     });
 
-    console.log("Uploaded to Cloudinary:", {
+    // Upload to Cloudinary as image
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "health-records/medical-reports",
+      resource_type: "image",
+      type: "upload",
+      access_mode: "public",
+      quality: "auto",
+      fetch_format: "auto",
+    });
+
+    console.log("✅ Uploaded to Cloudinary:", {
       url: result.secure_url,
       publicId: result.public_id,
-      resourceType: result.resource_type,
+      format: result.format,
     });
+
+    // Verify URL is accessible
+    if (!result.secure_url) {
+      throw new Error("Failed to get Cloudinary URL");
+    }
 
     // Delete temporary file
     fs.unlinkSync(req.file.path);
@@ -102,13 +126,15 @@ export const uploadReport = async (req, res) => {
     // Populate family member info
     await medicalReport.populate("familyMemberId", "name relation");
 
+    console.log("✅ Report saved to database");
+
     return res.status(201).json({
       success: true,
       message: "Report uploaded successfully",
       report: medicalReport,
     });
   } catch (error) {
-    console.error("Upload report error:", error);
+    console.error("❌ Upload report error:", error);
 
     // Delete temporary file if exists
     if (req.file && req.file.path) {
@@ -343,12 +369,10 @@ export const deleteReport = async (req, res) => {
       });
     }
 
-    // Delete file from Cloudinary
+    // Delete file from Cloudinary (always image type)
     try {
       await cloudinary.uploader.destroy(report.reportFile.publicId, {
-        resource_type: report.reportFile.mimeType.includes("pdf")
-          ? "raw"
-          : "image",
+        resource_type: "image",
       });
     } catch (error) {
       console.error("Error deleting file from Cloudinary:", error);
