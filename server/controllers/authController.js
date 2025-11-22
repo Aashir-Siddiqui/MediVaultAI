@@ -37,25 +37,40 @@ export const register = async (req, res) => {
       password: hashedPassword,
     });
 
+    // Create token and set cookie for OTP verification process
     const token = jwt.sign({ userId: user._id }, jwtSecret, {
       expiresIn: "7d",
     });
 
     res.cookie(cookieName, token, cookieOptions);
 
+    // Send welcome email (not OTP yet - that's sent separately)
     const mailOptions = {
       from: senderEmail,
       to: email,
-      subject: "Welcome to Our Service!",
-      text: `Hello ${name},\n\nThank you for registering your account. Please verify your email to continue.`,
+      subject: "Welcome to MediVault AI!",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #0d9488;">Welcome to MediVault AI, ${name}!</h2>
+          <p>Thank you for registering your account.</p>
+          <p>Please verify your email address to activate your account and start using our services.</p>
+          <p>You will receive a verification code shortly.</p>
+          <br/>
+          <p style="color: #666; font-size: 12px;">If you didn't create this account, please ignore this email.</p>
+        </div>
+      `,
     };
 
     await transporter.sendMail(mailOptions);
 
     return res.status(201).json({
       success: true,
-      message: "User registered successfully",
-      user: { name: user.name, email: user.email },
+      message: "User registered successfully. Please verify your email.",
+      user: {
+        name: user.name,
+        email: user.email,
+        isVerified: user.isVerified,
+      },
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -80,11 +95,24 @@ export const login = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Invalid credentials" });
 
+    // Check if email is verified
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email before logging in",
+        needsVerification: true,
+      });
+    }
+
     const token = jwt.sign({ userId: user._id }, jwtSecret, {
       expiresIn: "7d",
     });
 
     res.cookie(cookieName, token, cookieOptions);
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
 
     return res.status(200).json({
       success: true,
@@ -127,11 +155,11 @@ export const sendVerifyOtp = async (req, res) => {
     if (user.isVerified) {
       return res
         .status(400)
-        .json({ success: false, message: "User already verified" });
+        .json({ success: false, message: "Email already verified" });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpireAt = Date.now() + 10 * 60 * 1000;
+    const otpExpireAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     user.verifyOtp = otp;
     user.verifyOtpExpireAt = otpExpireAt;
@@ -140,15 +168,28 @@ export const sendVerifyOtp = async (req, res) => {
     const mailOptions = {
       from: senderEmail,
       to: user.email,
-      subject: "Your Verification OTP",
-      text: `Hello ${user.name},\n\nYour OTP for email verification is: ${otp}\n\nThis OTP will expire in 10 minutes.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nTeam`,
+      subject: "Email Verification Code - MediVault AI",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #0d9488;">Email Verification</h2>
+          <p>Hello ${user.name},</p>
+          <p>Your verification code is:</p>
+          <div style="background-color: #f0fdfa; border: 2px solid #0d9488; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #0d9488; font-size: 36px; letter-spacing: 8px; margin: 0;">${otp}</h1>
+          </div>
+          <p>This code will expire in <strong>10 minutes</strong>.</p>
+          <p>If you didn't request this verification, please ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+          <p style="color: #666; font-size: 12px;">© 2025 MediVault AI. All rights reserved.</p>
+        </div>
+      `,
     };
 
     await transporter.sendMail(mailOptions);
 
     return res
       .status(200)
-      .json({ success: true, message: "OTP sent to email successfully" });
+      .json({ success: true, message: "Verification code sent to your email" });
   } catch (error) {
     console.error("Send verify OTP error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -171,22 +212,47 @@ export const verifyEmail = async (req, res) => {
     if (user.isVerified) {
       return res
         .status(400)
-        .json({ success: false, message: "User already verified" });
+        .json({ success: false, message: "Email already verified" });
     }
 
     if (!user.verifyOtp || user.verifyOtp !== otp) {
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid verification code",
+      });
     }
 
     if (user.verifyOtpExpireAt < Date.now()) {
-      return res.status(400).json({ success: false, message: "OTP expired" });
+      return res.status(400).json({
+        success: false,
+        message: "Verification code expired. Please request a new one.",
+      });
     }
 
+    // Mark as verified and clear OTP
     user.isVerified = true;
     user.verifyOtp = "";
     user.verifyOtpExpireAt = 0;
-
     await user.save();
+
+    // Send confirmation email
+    const mailOptions = {
+      from: senderEmail,
+      to: user.email,
+      subject: "Email Verified Successfully!",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #0d9488;">Email Verified! 🎉</h2>
+          <p>Hello ${user.name},</p>
+          <p>Your email has been successfully verified. You can now log in and start using MediVault AI.</p>
+          <p>Welcome aboard!</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+          <p style="color: #666; font-size: 12px;">© 2025 MediVault AI. All rights reserved.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
 
     return res
       .status(200)
@@ -220,12 +286,12 @@ export const sendResetOtp = async (req, res) => {
       // Security: Don't reveal if user exists or not
       return res.status(200).json({
         success: true,
-        message: "If this email exists, you will receive a reset OTP",
+        message: "If this email exists, you will receive a reset code",
       });
     }
 
     const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetOtpExpireAt = Date.now() + 10 * 60 * 1000;
+    const resetOtpExpireAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     user.resetOtp = resetOtp;
     user.resetOtpExpireAt = resetOtpExpireAt;
@@ -234,15 +300,28 @@ export const sendResetOtp = async (req, res) => {
     const mailOptions = {
       from: senderEmail,
       to: user.email,
-      subject: "Your Password Reset OTP",
-      text: `Hello ${user.name},\n\nYour OTP for password reset is: ${resetOtp}\n\nThis OTP will expire in 10 minutes.\n\nIf you didn't request this, please ignore this email and your password will remain unchanged.\n\nBest regards,\nTeam`,
+      subject: "Password Reset Code - MediVault AI",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #0d9488;">Password Reset Request</h2>
+          <p>Hello ${user.name},</p>
+          <p>You requested to reset your password. Your reset code is:</p>
+          <div style="background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #f59e0b; font-size: 36px; letter-spacing: 8px; margin: 0;">${resetOtp}</h1>
+          </div>
+          <p>This code will expire in <strong>10 minutes</strong>.</p>
+          <p><strong>If you didn't request this</strong>, please ignore this email and your password will remain unchanged.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+          <p style="color: #666; font-size: 12px;">© 2025 MediVault AI. All rights reserved.</p>
+        </div>
+      `,
     };
 
     await transporter.sendMail(mailOptions);
 
     return res.status(200).json({
       success: true,
-      message: "If this email exists, you will receive a reset OTP",
+      message: "If this email exists, you will receive a reset code",
     });
   } catch (error) {
     console.error("Send reset OTP error:", error);
@@ -262,14 +341,20 @@ export const verifyResetOtp = async (req, res) => {
         .json({ success: false, message: "Invalid request" });
 
     if (!user.resetOtp || user.resetOtp !== otp)
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reset code",
+      });
 
     if (user.resetOtpExpireAt < Date.now())
-      return res.status(400).json({ success: false, message: "OTP expired" });
+      return res.status(400).json({
+        success: false,
+        message: "Reset code expired. Please request a new one.",
+      });
 
     return res.status(200).json({
       success: true,
-      message: "OTP verified successfully. You can now reset your password.",
+      message: "Code verified! You can now reset your password.",
     });
   } catch (error) {
     console.error("Verify reset OTP error:", error);
@@ -289,10 +374,16 @@ export const resetPassword = async (req, res) => {
         .json({ success: false, message: "Invalid request" });
 
     if (!user.resetOtp || user.resetOtp !== otp)
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reset code",
+      });
 
     if (user.resetOtpExpireAt < Date.now())
-      return res.status(400).json({ success: false, message: "OTP expired" });
+      return res.status(400).json({
+        success: false,
+        message: "Reset code expired. Please start the process again.",
+      });
 
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
     user.password = hashedPassword;
@@ -305,7 +396,17 @@ export const resetPassword = async (req, res) => {
       from: senderEmail,
       to: user.email,
       subject: "Password Reset Successful",
-      text: `Hello ${user.name},\n\nYour password has been reset successfully.\n\nIf you didn't make this change, please contact us immediately.\n\nBest regards,\nTeam`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #0d9488;">Password Changed Successfully</h2>
+          <p>Hello ${user.name},</p>
+          <p>Your password has been successfully reset.</p>
+          <p>You can now log in with your new password.</p>
+          <p><strong>If you didn't make this change</strong>, please contact us immediately.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+          <p style="color: #666; font-size: 12px;">© 2025 MediVault AI. All rights reserved.</p>
+        </div>
+      `,
     };
 
     await transporter.sendMail(mailOptions);

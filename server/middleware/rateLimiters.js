@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 
 // Login attempts limiter
 export const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 1 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per 15 minutes
   message: {
     success: false,
@@ -17,7 +17,7 @@ export const loginLimiter = rateLimit({
 
 // OTP send limiter (email verification)
 export const verifyOtpLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 1 * 60 * 1000, // 1 hour
   max: 3, // 3 OTP requests per hour
   message: {
     success: false,
@@ -29,7 +29,7 @@ export const verifyOtpLimiter = rateLimit({
 
 // Password reset OTP limiter
 export const resetOtpLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 1 * 60 * 1000, // 1 hour
   max: 3, // 3 reset requests per hour
   message: {
     success: false,
@@ -41,7 +41,7 @@ export const resetOtpLimiter = rateLimit({
 
 // General registration limiter
 export const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 1 * 60 * 1000, // 1 hour
   max: 3, // 3 registrations per hour per IP
   message: {
     success: false,
@@ -54,7 +54,7 @@ export const registerLimiter = rateLimit({
 
 // Password reset action limiter
 export const resetPasswordLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 1 * 60 * 1000, // 1 hour
   max: 5, // 5 password reset attempts per hour
   message: {
     success: false,
@@ -66,7 +66,7 @@ export const resetPasswordLimiter = rateLimit({
 
 // General API limiter (for all routes)
 export const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 1 * 60 * 1000, // 15 minutes
   max: 100, // 100 requests per 15 minutes
   message: {
     success: false,

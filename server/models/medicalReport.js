@@ -1,4 +1,3 @@
-// models/MedicalReport.js
 import mongoose from "mongoose";
 
 const medicalReportSchema = new mongoose.Schema(

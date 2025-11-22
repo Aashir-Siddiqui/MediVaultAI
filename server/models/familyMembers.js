@@ -1,4 +1,3 @@
-// models/FamilyMember.js
 import mongoose from "mongoose";
 
 const familyMemberSchema = new mongoose.Schema(
@@ -7,7 +6,7 @@ const familyMemberSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true, // Index for faster queries
+      index: true,
     },
 
     name: {
