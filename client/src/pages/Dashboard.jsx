@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchFamily, deleteFamilyMember } from "../store/familySlice";
 import { Link, useNavigate } from "react-router-dom";
+import api from "../api/axios";
 import {
   Plus,
   FileText,
@@ -14,6 +15,8 @@ import {
   Phone,
   Calendar,
   Droplet,
+  CheckCircle,
+  TrendingUp,
 } from "lucide-react";
 import AddFamilyModal from "../components/AddFamilyModal";
 import EditFamilyModal from "../components/EditFamilyModal";
@@ -29,9 +32,49 @@ const Dashboard = () => {
   const [editingMember, setEditingMember] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
+  // Stats state
+  const [stats, setStats] = useState({
+    totalReports: 0,
+    analyzedReports: 0,
+    pendingAnalysis: 0,
+    healthScore: null,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
   useEffect(() => {
     dispatch(fetchFamily());
+    fetchDashboardStats();
   }, [dispatch]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setStatsLoading(true);
+      const response = await api.get("/reports/stats");
+
+      if (response.data.success) {
+        const { totalReports, analyzedReports, pendingAnalysis } =
+          response.data.stats;
+
+        // Calculate health score based on analyzed reports
+        let healthScore = null;
+        if (totalReports > 0) {
+          const analysisRate = (analyzedReports / totalReports) * 100;
+          healthScore = Math.round(analysisRate);
+        }
+
+        setStats({
+          totalReports,
+          analyzedReports,
+          pendingAnalysis,
+          healthScore,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const handleDelete = async (id, name) => {
     if (
@@ -45,6 +88,8 @@ const Dashboard = () => {
     setDeletingId(id);
     try {
       await dispatch(deleteFamilyMember(id)).unwrap();
+      // Refresh stats after deletion
+      fetchDashboardStats();
     } catch (error) {
       console.error("Delete failed:", error);
     } finally {
@@ -54,6 +99,15 @@ const Dashboard = () => {
 
   const handleViewReports = (memberId) => {
     navigate(`/reports/${memberId}`);
+  };
+
+  // Health score color
+  const getHealthScoreColor = (score) => {
+    if (score === null) return "bg-gray-500";
+    if (score >= 80) return "bg-green-500";
+    if (score >= 60) return "bg-yellow-500";
+    if (score >= 40) return "bg-orange-500";
+    return "bg-red-500";
   };
 
   return (
@@ -85,9 +139,10 @@ const Dashboard = () => {
             </Link>
           </div>
 
-          {/* Quick Stats */}
+          {/* Enhanced Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+            {/* Family Members */}
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/25 transition cursor-pointer">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white/30 rounded-lg flex items-center justify-center">
                   <Users className="text-white" size={24} />
@@ -98,40 +153,84 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+
+            {/* Total Reports */}
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/25 transition cursor-pointer">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white/30 rounded-lg flex items-center justify-center">
                   <FileText className="text-white" size={24} />
                 </div>
                 <div>
                   <p className="text-teal-100 text-sm">Total Reports</p>
-                  <p className="text-2xl font-bold">0</p>
+                  {statsLoading ? (
+                    <div className="w-12 h-7 bg-white/20 rounded animate-pulse"></div>
+                  ) : (
+                    <p className="text-2xl font-bold">{stats.totalReports}</p>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+
+            {/* Analyzed */}
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/25 transition cursor-pointer">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white/30 rounded-lg flex items-center justify-center">
-                  <Activity className="text-white" size={24} />
+                  <CheckCircle className="text-white" size={24} />
                 </div>
                 <div>
                   <p className="text-teal-100 text-sm">Analyzed</p>
-                  <p className="text-2xl font-bold">0</p>
+                  {statsLoading ? (
+                    <div className="w-12 h-7 bg-white/20 rounded animate-pulse"></div>
+                  ) : (
+                    <p className="text-2xl font-bold">
+                      {stats.analyzedReports}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+
+            {/* Health Score */}
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/25 transition cursor-pointer">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white/30 rounded-lg flex items-center justify-center">
-                  <Heart className="text-white" size={24} />
+                  <TrendingUp className="text-white" size={24} />
                 </div>
                 <div>
                   <p className="text-teal-100 text-sm">Health Score</p>
-                  <p className="text-2xl font-bold">--</p>
+                  {statsLoading ? (
+                    <div className="w-12 h-7 bg-white/20 rounded animate-pulse"></div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-2xl font-bold">
+                        {stats.healthScore !== null
+                          ? `${stats.healthScore}%`
+                          : "--"}
+                      </p>
+                      {stats.healthScore !== null && (
+                        <div
+                          className={`w-2 h-2 rounded-full ${getHealthScoreColor(
+                            stats.healthScore
+                          )}`}
+                        ></div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Additional Info */}
+          {!statsLoading && stats.pendingAnalysis > 0 && (
+            <div className="mt-4 bg-yellow-500/20 border border-yellow-300/30 rounded-lg p-3 flex items-center gap-2">
+              <AlertCircle size={18} className="text-yellow-100" />
+              <p className="text-sm text-yellow-100">
+                You have <strong>{stats.pendingAnalysis}</strong> report
+                {stats.pendingAnalysis > 1 ? "s" : ""} pending analysis
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
