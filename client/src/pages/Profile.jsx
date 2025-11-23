@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateLocalUser } from "../store/authSlice";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import {
   User,
@@ -11,28 +12,36 @@ import {
   Save,
   Loader,
   Trash2,
+  ArrowLeft,
+  Mail,
+  Calendar,
+  Droplet,
+  Shield,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const Profile = () => {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("details"); // details | password
+  const [activeTab, setActiveTab] = useState("details");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  // Profile Form State
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    dateOfBirth: "",
+    gender: "",
+    bloodGroup: "",
     address: "",
     city: "",
     state: "",
     country: "",
   });
 
-  // Password Form State
   const [passData, setPassData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -43,6 +52,11 @@ const Profile = () => {
       setFormData({
         name: user.name || "",
         phone: user.phone || "",
+        dateOfBirth: user.dateOfBirth
+          ? new Date(user.dateOfBirth).toISOString().split("T")[0]
+          : "",
+        gender: user.gender || "",
+        bloodGroup: user.bloodGroup || "",
         address: user.address || "",
         city: user.city || "",
         state: user.state || "",
@@ -51,10 +65,17 @@ const Profile = () => {
     }
   }, [user]);
 
-  // Handle Profile Picture Upload
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      return toast.error("Please select an image file");
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error("Image size should be less than 5MB");
+    }
 
     const formData = new FormData();
     formData.append("profilePicture", file);
@@ -67,13 +88,30 @@ const Profile = () => {
       dispatch(updateLocalUser({ profilePicture: data.profilePicture }));
       toast.success("Profile picture updated!");
     } catch (error) {
-      toast.error("Failed to upload image");
+      toast.error(error.response?.data?.message || "Failed to upload image");
     } finally {
       setUploading(false);
     }
   };
 
-  // Handle Profile Details Update
+  const handleImageDelete = async () => {
+    if (
+      !window.confirm("Are you sure you want to remove your profile picture?")
+    )
+      return;
+
+    setDeleting(true);
+    try {
+      await api.delete("/user/profile-picture");
+      dispatch(updateLocalUser({ profilePicture: { url: "", publicId: "" } }));
+      toast.success("Profile picture removed!");
+    } catch (error) {
+      toast.error("Failed to delete image");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -88,9 +126,23 @@ const Profile = () => {
     }
   };
 
-  // Handle Password Change
   const handlePasswordChange = async (e) => {
     e.preventDefault();
+
+    if (passData.newPassword.length < 8) {
+      return toast.error("Password must be at least 8 characters");
+    }
+
+    const hasUppercase = /[A-Z]/.test(passData.newPassword);
+    const hasNumber = /\d/.test(passData.newPassword);
+    const hasSpecial = /[@$!%*?&]/.test(passData.newPassword);
+
+    if (!hasUppercase || !hasNumber || !hasSpecial) {
+      return toast.error(
+        "Password must include uppercase, number & special character"
+      );
+    }
+
     setLoading(true);
     try {
       await api.post("/user/change-password", passData);
@@ -104,18 +156,32 @@ const Profile = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">
-        Account Settings
-      </h1>
+    <div className="space-y-6">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate("/")}
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition font-medium"
+      >
+        <ArrowLeft size={20} />
+        <span>Back to Dashboard</span>
+      </button>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left Column: Profile Card & Navigation */}
+      {/* Header */}
+      <div className="bg-gradient-to-r from-teal-600 via-teal-700 to-cyan-700 rounded-3xl p-8 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold mb-2">Account Settings</h1>
+          <p className="text-teal-100">Manage your profile and preferences</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Profile Image Card */}
+          {/* Profile Card */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
             <div className="relative inline-block mb-4">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-teal-50 bg-gray-100">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-teal-100 bg-gray-100 shadow-lg">
                 {user?.profilePicture?.url ? (
                   <img
                     src={user.profilePicture.url}
@@ -123,28 +189,45 @@ const Profile = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <User className="w-full h-full p-6 text-gray-400" />
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-teal-400 to-cyan-500">
+                    <User className="text-white" size={48} />
+                  </div>
                 )}
               </div>
-              <label className="absolute bottom-0 right-0 bg-teal-600 text-white p-2 rounded-full cursor-pointer hover:bg-teal-700 transition shadow-lg">
+              <label className="absolute bottom-0 right-0 bg-teal-600 text-white p-2.5 rounded-full cursor-pointer hover:bg-teal-700 transition shadow-lg">
                 {uploading ? (
-                  <Loader size={16} className="animate-spin" />
+                  <Loader size={18} className="animate-spin" />
                 ) : (
-                  <Camera size={16} />
+                  <Camera size={18} />
                 )}
                 <input
                   type="file"
                   className="hidden"
                   accept="image/*"
                   onChange={handleImageUpload}
+                  disabled={uploading}
                 />
               </label>
             </div>
             <h2 className="text-xl font-bold text-gray-800">{user?.name}</h2>
-            <p className="text-gray-500 text-sm">{user?.email}</p>
+            <p className="text-gray-500 text-sm mt-1">{user?.email}</p>
+            {user?.profilePicture?.url && (
+              <button
+                onClick={handleImageDelete}
+                disabled={deleting}
+                className="mt-4 text-red-600 hover:text-red-700 text-sm font-medium flex items-center gap-1 mx-auto disabled:opacity-50"
+              >
+                {deleting ? (
+                  <Loader size={14} className="animate-spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
+                Remove Photo
+              </button>
+            )}
           </div>
 
-          {/* Navigation Tabs */}
+          {/* Navigation */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <button
               onClick={() => setActiveTab("details")}
@@ -164,20 +247,17 @@ const Profile = () => {
                   : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              <Lock size={20} /> Security & Password
+              <Lock size={20} /> Change Password
             </button>
           </div>
         </div>
 
-        {/* Right Column: Forms */}
-        <div className="md:col-span-2">
+        {/* Main Content */}
+        <div className="lg:col-span-3">
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
             {activeTab === "details" ? (
-              <form
-                onSubmit={handleProfileUpdate}
-                className="space-y-6 animate-fadeIn"
-              >
-                <h3 className="text-xl font-bold text-gray-800 mb-4">
+              <form onSubmit={handleProfileUpdate} className="space-y-6">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6 pb-4 border-b">
                   Personal Information
                 </h3>
 
@@ -188,12 +268,12 @@ const Profile = () => {
                     </label>
                     <div className="relative">
                       <User
-                        className="absolute left-3 top-3 text-gray-400"
+                        className="absolute left-3 top-3.5 text-gray-400"
                         size={18}
                       />
                       <input
                         type="text"
-                        className="w-full pl-10 p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                        className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
                         value={formData.name}
                         onChange={(e) =>
                           setFormData({ ...formData, name: e.target.value })
@@ -201,24 +281,98 @@ const Profile = () => {
                       />
                     </div>
                   </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Phone Number
                     </label>
                     <div className="relative">
                       <Phone
-                        className="absolute left-3 top-3 text-gray-400"
+                        className="absolute left-3 top-3.5 text-gray-400"
                         size={18}
                       />
                       <input
-                        type="text"
-                        className="w-full pl-10 p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                        type="tel"
+                        className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
                         value={formData.phone}
                         onChange={(e) =>
                           setFormData({ ...formData, phone: e.target.value })
                         }
-                        placeholder="+1 234 567 890"
+                        placeholder="+92 300 1234567"
                       />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Date of Birth
+                    </label>
+                    <div className="relative">
+                      <Calendar
+                        className="absolute left-3 top-3.5 text-gray-400"
+                        size={18}
+                      />
+                      <input
+                        type="date"
+                        className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                        value={formData.dateOfBirth}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            dateOfBirth: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Gender
+                    </label>
+                    <select
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                      value={formData.gender}
+                      onChange={(e) =>
+                        setFormData({ ...formData, gender: e.target.value })
+                      }
+                    >
+                      <option value="">Select</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Blood Group
+                    </label>
+                    <div className="relative">
+                      <Droplet
+                        className="absolute left-3 top-3.5 text-gray-400"
+                        size={18}
+                      />
+                      <select
+                        className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                        value={formData.bloodGroup}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            bloodGroup: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">Select</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -229,12 +383,12 @@ const Profile = () => {
                   </label>
                   <div className="relative">
                     <MapPin
-                      className="absolute left-3 top-3 text-gray-400"
+                      className="absolute left-3 top-3.5 text-gray-400"
                       size={18}
                     />
                     <input
                       type="text"
-                      className="w-full pl-10 p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                      className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
                       value={formData.address}
                       onChange={(e) =>
                         setFormData({ ...formData, address: e.target.value })
@@ -251,7 +405,7 @@ const Profile = () => {
                     </label>
                     <input
                       type="text"
-                      className="w-full p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
                       value={formData.city}
                       onChange={(e) =>
                         setFormData({ ...formData, city: e.target.value })
@@ -264,7 +418,7 @@ const Profile = () => {
                     </label>
                     <input
                       type="text"
-                      className="w-full p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
                       value={formData.state}
                       onChange={(e) =>
                         setFormData({ ...formData, state: e.target.value })
@@ -277,7 +431,7 @@ const Profile = () => {
                     </label>
                     <input
                       type="text"
-                      className="w-full p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
                       value={formData.country}
                       onChange={(e) =>
                         setFormData({ ...formData, country: e.target.value })
@@ -286,76 +440,109 @@ const Profile = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="pt-4">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-lg font-medium transition flex items-center gap-2 disabled:opacity-70"
+                    className="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 disabled:opacity-70"
                   >
                     {loading ? (
-                      <Loader className="animate-spin" size={18} />
+                      <>
+                        <Loader className="animate-spin" size={18} />
+                        Saving...
+                      </>
                     ) : (
-                      <Save size={18} />
-                    )}{" "}
-                    Save Changes
+                      <>
+                        <Save size={18} />
+                        Save Changes
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
             ) : (
-              <form
-                onSubmit={handlePasswordChange}
-                className="space-y-6 animate-fadeIn"
-              >
-                <h3 className="text-xl font-bold text-gray-800 mb-4">
-                  Change Password
-                </h3>
+              <form onSubmit={handlePasswordChange} className="space-y-6">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+                  <Shield className="text-teal-600" size={28} />
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800">
+                      Change Password
+                    </h3>
+                    <p className="text-gray-500 text-sm">
+                      Keep your account secure
+                    </p>
+                  </div>
+                </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Current Password
                   </label>
-                  <input
-                    type="password"
-                    required
-                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                    value={passData.currentPassword}
-                    onChange={(e) =>
-                      setPassData({
-                        ...passData,
-                        currentPassword: e.target.value,
-                      })
-                    }
-                  />
+                  <div className="relative">
+                    <Lock
+                      className="absolute left-3 top-3.5 text-gray-400"
+                      size={18}
+                    />
+                    <input
+                      type="password"
+                      required
+                      className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                      value={passData.currentPassword}
+                      onChange={(e) =>
+                        setPassData({
+                          ...passData,
+                          currentPassword: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     New Password
                   </label>
-                  <input
-                    type="password"
-                    required
-                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                    placeholder="Min 8 characters, 1 uppercase, 1 number"
-                    value={passData.newPassword}
-                    onChange={(e) =>
-                      setPassData({ ...passData, newPassword: e.target.value })
-                    }
-                  />
+                  <div className="relative">
+                    <Lock
+                      className="absolute left-3 top-3.5 text-gray-400"
+                      size={18}
+                    />
+                    <input
+                      type="password"
+                      required
+                      className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                      placeholder="Min 8 chars, uppercase, number, special char"
+                      value={passData.newPassword}
+                      onChange={(e) =>
+                        setPassData({
+                          ...passData,
+                          newPassword: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Must include: uppercase, number & special character
+                  </p>
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="pt-4">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2.5 rounded-lg font-medium transition flex items-center gap-2 disabled:opacity-70"
+                    className="w-full md:w-auto bg-gray-900 hover:bg-black text-white px-8 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 disabled:opacity-70"
                   >
                     {loading ? (
-                      <Loader className="animate-spin" size={18} />
+                      <>
+                        <Loader className="animate-spin" size={18} />
+                        Updating...
+                      </>
                     ) : (
-                      <Save size={18} />
-                    )}{" "}
-                    Update Password
+                      <>
+                        <Save size={18} />
+                        Update Password
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
