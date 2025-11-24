@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import MemberReports from "./pages/MemberReports";
+import ReportDetailView from "./pages/ReportDetailView";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -142,6 +143,15 @@ function App() {
           element={
             <ProtectedRoute>
               <MemberReports />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/report/:id"
+          element={
+            <ProtectedRoute>
+              <ReportDetailView />
             </ProtectedRoute>
           }
         />

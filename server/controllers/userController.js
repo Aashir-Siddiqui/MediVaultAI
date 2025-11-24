@@ -2,6 +2,8 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../config/cloudinary.js";
 import fs from "fs";
+import MedicalReport from "../models/MedicalReport.js";
+import FamilyMember from "../models/FamilyMembers.js";
 
 // Get user data (profile)
 export const getUserData = async (req, res) => {
@@ -282,6 +284,8 @@ export const deleteAccount = async (req, res) => {
     const userId = req.userId;
     const { password } = req.body;
 
+    console.log("🗑️ Starting account deletion for user:", userId);
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -301,27 +305,80 @@ export const deleteAccount = async (req, res) => {
       });
     }
 
-    // Delete profile picture from Cloudinary if exists
+    //1. Delete user's profile picture from Cloudinary
     if (user.profilePicture && user.profilePicture.publicId) {
       try {
         await cloudinary.uploader.destroy(user.profilePicture.publicId);
+        console.log("User profile picture deleted");
       } catch (error) {
-        console.error("Error deleting profile picture:", error);
+        console.error("Error deleting user profile picture:", error);
       }
     }
 
-    // TODO: Delete all family members and their reports
-    // This will be implemented when FamilyMember and MedicalReport models are created
+    // 2. Find all family members
+    const familyMembers = await FamilyMember.find({ userId });
+    console.log(`Found ${familyMembers.length} family members`);
 
-    // Delete user account
+    // 3. Delete family member profile images
+    for (const member of familyMembers) {
+      if (member.profileImage) {
+        try {
+          // Extract public_id from URL or use stored value
+          const publicId = member.profileImage
+            .split("/")
+            .slice(-2)
+            .join("/")
+            .split(".")[0];
+          await cloudinary.uploader.destroy(publicId);
+          console.log(`Deleted profile image for ${member.name}`);
+        } catch (error) {
+          console.error(`Error deleting image for ${member.name}:`, error);
+        }
+      }
+    }
+
+    // 4. Find all medical reports
+    const reports = await MedicalReport.find({ userId });
+    console.log(`Found ${reports.length} medical reports`);
+
+    // 5. Delete all report files from Cloudinary
+    for (const report of reports) {
+      if (report.reportFile && report.reportFile.publicId) {
+        try {
+          await cloudinary.uploader.destroy(report.reportFile.publicId, {
+            resource_type: "image",
+          });
+          console.log(`Deleted report file: ${report.reportType}`);
+        } catch (error) {
+          console.error(`Error deleting report file:`, error);
+        }
+      }
+    }
+
+    // 6. Delete all medical reports from database
+    const deletedReports = await MedicalReport.deleteMany({ userId });
+    console.log(`Deleted ${deletedReports.deletedCount} medical reports`);
+
+    // 7. Delete all family members from database
+    const deletedMembers = await FamilyMember.deleteMany({ userId });
+    console.log(`Deleted ${deletedMembers.deletedCount} family members`);
+
+    // 8. Delete user account
     await User.findByIdAndDelete(userId);
+    console.log("User account deleted");
 
-    // Clear cookie
+    //9. Clear cookie
     res.clearCookie(process.env.COOKIE_NAME);
+
+    console.log("Account deletion completed successfully");
 
     return res.status(200).json({
       success: true,
-      message: "Account deleted successfully",
+      message: "Account and all associated data deleted successfully",
+      deleted: {
+        familyMembers: deletedMembers.deletedCount,
+        reports: deletedReports.deletedCount,
+      },
     });
   } catch (error) {
     console.error("Delete account error:", error);

@@ -1,6 +1,7 @@
+// Profile.jsx - FIXED VALIDATION & ADD DELETE ACCOUNT
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { updateLocalUser } from "../store/authSlice";
+import { updateLocalUser, logoutUser } from "../store/authSlice";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import {
@@ -17,6 +18,7 @@ import {
   Calendar,
   Droplet,
   Shield,
+  AlertTriangle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -29,6 +31,11 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Delete account modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -116,7 +123,20 @@ const Profile = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await api.put("/user/profile", formData);
+      // ✅ FIXED: Send empty strings instead of undefined for optional fields
+      const cleanedData = {
+        name: formData.name || "",
+        phone: formData.phone || "",
+        dateOfBirth: formData.dateOfBirth || "",
+        gender: formData.gender || "",
+        bloodGroup: formData.bloodGroup || "",
+        address: formData.address || "",
+        city: formData.city || "",
+        state: formData.state || "",
+        country: formData.country || "",
+      };
+
+      const { data } = await api.put("/user/profile", cleanedData);
       dispatch(updateLocalUser(data.user));
       toast.success("Profile updated successfully!");
     } catch (error) {
@@ -152,6 +172,34 @@ const Profile = () => {
       toast.error(error.response?.data?.message || "Failed to change password");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ NEW: Delete Account Function
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      return toast.error("Please enter your password");
+    }
+
+    if (confirmDelete !== "DELETE") {
+      return toast.error("Please type DELETE to confirm");
+    }
+
+    setDeleting(true);
+    try {
+      await api.delete("/user/delete-account", {
+        data: { password: deletePassword },
+      });
+
+      toast.success("Account deleted successfully");
+
+      // Logout and redirect
+      dispatch(logoutUser());
+      navigate("/login");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete account");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -248,6 +296,16 @@ const Profile = () => {
               }`}
             >
               <Lock size={20} /> Change Password
+            </button>
+            <button
+              onClick={() => setActiveTab("danger")}
+              className={`w-full text-left px-6 py-4 flex items-center gap-3 transition ${
+                activeTab === "danger"
+                  ? "bg-red-50 text-red-700 font-semibold border-l-4 border-red-600"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <AlertTriangle size={20} /> Danger Zone
             </button>
           </div>
         </div>
@@ -460,7 +518,7 @@ const Profile = () => {
                   </button>
                 </div>
               </form>
-            ) : (
+            ) : activeTab === "password" ? (
               <form onSubmit={handlePasswordChange} className="space-y-6">
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b">
                   <Shield className="text-teal-600" size={28} />
@@ -546,10 +604,132 @@ const Profile = () => {
                   </button>
                 </div>
               </form>
+            ) : (
+              // ✅ NEW: Danger Zone Tab
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-red-200">
+                  <AlertTriangle className="text-red-600" size={28} />
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800">
+                      Danger Zone
+                    </h3>
+                    <p className="text-gray-500 text-sm">
+                      Irreversible and destructive actions
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+                  <h4 className="text-lg font-bold text-red-900 mb-2">
+                    Delete Account
+                  </h4>
+                  <p className="text-red-700 text-sm mb-4">
+                    Once you delete your account, there is no going back. All
+                    your family members, reports, and data will be permanently
+                    deleted.
+                  </p>
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl font-semibold transition flex items-center gap-2"
+                  >
+                    <Trash2 size={18} />
+                    Delete My Account
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* ✅ NEW: Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+            <div className="flex items-center gap-3 mb-4 text-red-600">
+              <AlertTriangle size={32} />
+              <h3 className="text-2xl font-bold text-gray-800">
+                Delete Account
+              </h3>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <p className="text-gray-700">
+                This action <strong>cannot be undone</strong>. This will
+                permanently delete:
+              </p>
+              <ul className="list-disc list-inside text-gray-600 space-y-1 ml-4">
+                <li>Your account and profile</li>
+                <li>All family members</li>
+                <li>All medical reports</li>
+                <li>All analysis data</li>
+              </ul>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Enter your password to confirm
+                </label>
+                <input
+                  type="password"
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Your password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Type{" "}
+                  <span className="font-mono bg-gray-100 px-2 py-1 rounded">
+                    DELETE
+                  </span>{" "}
+                  to confirm
+                </label>
+                <input
+                  type="text"
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none"
+                  value={confirmDelete}
+                  onChange={(e) => setConfirmDelete(e.target.value)}
+                  placeholder="DELETE"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={
+                  deleting || !deletePassword || confirmDelete !== "DELETE"
+                }
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? (
+                  <>
+                    <Loader className="animate-spin" size={18} />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={18} />
+                    Delete Forever
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword("");
+                  setConfirmDelete("");
+                }}
+                className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-semibold transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

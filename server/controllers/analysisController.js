@@ -1,4 +1,4 @@
-// controllers/analysisController.js
+// controllers/analysisController.js - FIXED
 import MedicalReport from "../models/MedicalReport.js";
 import FamilyMember from "../models/FamilyMembers.js";
 import User from "../models/User.js";
@@ -15,18 +15,15 @@ import {
   sendAnalysisEmail,
   sendHealthSummaryEmail,
 } from "../services/emailService.js";
-import {
-  generateAnalysisPDF,
-  generateHealthSummaryPDF,
-  savePDFToFile,
-} from "../services/pdfService.js";
+import { generateAnalysisPDF } from "../services/pdfService.js";
 
-// Analyze a specific report
+// Analyze a specific report - FIXED
 export const analyzeReport = async (req, res) => {
   try {
     const userId = req.userId;
     const { id } = req.params;
-    const { sendEmail = false } = req.body;
+    // FIXED: Handle undefined body
+    const sendEmail = req.body?.sendEmail || false;
 
     console.log("🔍 Starting analysis for report:", id);
 
@@ -60,7 +57,7 @@ export const analyzeReport = async (req, res) => {
 
       // STEP 1: Extract text if needed
       if (!extractedText || extractedText.length < 50) {
-        console.log("📝 Extracting text from file...");
+        console.log("📄 Extracting text from file...");
 
         try {
           extractedText = await extractTextFromFile(
@@ -151,7 +148,7 @@ export const analyzeReport = async (req, res) => {
           await sendAnalysisEmail(user.email, user.name, analysisData);
           console.log("✅ Email sent successfully");
         } catch (emailError) {
-          console.error("⚠️  Email sending failed:", emailError);
+          console.error("⚠️ Email sending failed:", emailError);
           // Don't fail the analysis if email fails
         }
       }
@@ -165,7 +162,7 @@ export const analyzeReport = async (req, res) => {
           _id: report._id,
           reportType: report.reportType,
           status: report.status,
-          extractedText: report.extractedText.substring(0, 500) + "...", // Preview only
+          extractedText: report.extractedText.substring(0, 500) + "...",
           aiAnalysis: report.aiAnalysis,
         },
       });
@@ -381,9 +378,8 @@ export const generateMemberHealthSummary = async (req, res) => {
   try {
     const userId = req.userId;
     const { memberId } = req.params;
-    const { sendEmail = false } = req.body;
+    const sendEmail = req.body?.sendEmail || false;
 
-    // Verify family member
     const familyMember = await FamilyMember.findOne({
       _id: memberId,
       userId,
@@ -396,7 +392,6 @@ export const generateMemberHealthSummary = async (req, res) => {
       });
     }
 
-    // Get all analyzed reports for this member
     const reports = await MedicalReport.find({
       userId,
       familyMemberId: memberId,
@@ -419,14 +414,11 @@ export const generateMemberHealthSummary = async (req, res) => {
       chronicConditions: familyMember.chronicConditions,
     };
 
-    // Generate summary
     const summary = await generateHealthSummary(reports, patientInfo);
 
-    // Send email if requested
     if (sendEmail) {
       try {
         const user = await User.findById(userId);
-
         const summaryData = {
           reportCount: reports.length,
           summary: summary,
@@ -435,7 +427,6 @@ export const generateMemberHealthSummary = async (req, res) => {
             latest: reports[0].reportDate,
           },
         };
-
         await sendHealthSummaryEmail(user.email, user.name, summaryData);
       } catch (emailError) {
         console.error("Email failed:", emailError);
@@ -520,6 +511,82 @@ export const askReportQuestion = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to answer question",
+    });
+  }
+};
+
+export const sendAnalysisEmailController = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+
+    console.log("📧 Sending analysis email for report:", id);
+
+    // Get report with family member
+    const report = await MedicalReport.findOne({ _id: id, userId }).populate(
+      "familyMemberId"
+    );
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: "Report not found",
+      });
+    }
+
+    // Check if analyzed
+    if (!report.aiAnalysis?.isAnalyzed) {
+      return res.status(400).json({
+        success: false,
+        message: "Report must be analyzed before sending email",
+      });
+    }
+
+    // Get user email
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Prepare analysis data for email
+    const familyMember = report.familyMemberId;
+    const analysisData = {
+      patientName: familyMember.name,
+      age: familyMember.age || calculateAge(familyMember.dateOfBirth),
+      gender: familyMember.gender,
+      bloodGroup: familyMember.bloodGroup,
+      reportType: report.reportType,
+      reportDate: report.reportDate,
+      hospitalName: report.hospitalName,
+      doctorName: report.doctorName,
+      summary: report.aiAnalysis.summary,
+      keyFindings: report.aiAnalysis.keyFindings,
+      abnormalValues: report.aiAnalysis.abnormalValues,
+      recommendations: report.aiAnalysis.recommendations,
+      healthInsights: report.aiAnalysis.healthInsights,
+      nextSteps: report.aiAnalysis.nextSteps,
+      allergies: familyMember.allergies,
+      chronicConditions: familyMember.chronicConditions,
+    };
+
+    // Send email with PDF attachment
+    await sendAnalysisEmail(user.email, user.name, analysisData);
+
+    console.log("✅ Email sent successfully to:", user.email);
+
+    return res.status(200).json({
+      success: true,
+      message: "Analysis sent to your email successfully",
+    });
+  } catch (error) {
+    console.error("❌ Send email error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to send email",
     });
   }
 };

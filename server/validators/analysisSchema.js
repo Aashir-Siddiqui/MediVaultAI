@@ -1,10 +1,9 @@
-// validators/analysisSchema.js
+// validators/analysisSchema.js - FIXED
 import { z } from "zod";
 
-// MongoDB ObjectId validation regex
 const objectIdRegex = /^[a-f\d]{24}$/i;
 
-// Analyze report validation
+// Analyze report validation - FIXED to handle optional body
 export const analyzeReportSchema = z.object({
   body: z
     .object({
@@ -16,8 +15,7 @@ export const analyzeReportSchema = z.object({
     id: z
       .string()
       .min(1, "Report ID is required")
-      .regex(objectIdRegex, "Invalid MongoDB ObjectId format")
-      .optional(),
+      .regex(objectIdRegex, "Invalid MongoDB ObjectId format"),
   }),
   query: z.object({}).optional(),
 });
@@ -39,7 +37,7 @@ export const askQuestionSchema = z.object({
   query: z.object({}).optional(),
 });
 
-// Health summary validation
+// Health summary validation - FIXED
 export const healthSummarySchema = z.object({
   body: z
     .object({

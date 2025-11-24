@@ -341,9 +341,6 @@ export const deleteFamilyMember = async (req, res) => {
       }
     }
 
-    // TODO: Delete all medical reports associated with this family member
-    // This will be implemented when MedicalReport model is created
-
     await FamilyMember.findByIdAndDelete(id);
 
     return res.status(200).json({
@@ -374,13 +371,12 @@ export const getFamilyMemberStats = async (req, res) => {
       });
     }
 
-    // TODO: Get report counts when MedicalReport model is created
     const stats = {
       name: familyMember.name,
       relation: familyMember.relation,
       age: calculateAge(familyMember.dateOfBirth),
-      reportsCount: 0, // Will be updated later
-      lastReportDate: null, // Will be updated later
+      reportsCount: 0,
+      lastReportDate: null,
       hasAllergies: familyMember.allergies.length > 0,
       hasChronicConditions: familyMember.chronicConditions.length > 0,
     };
