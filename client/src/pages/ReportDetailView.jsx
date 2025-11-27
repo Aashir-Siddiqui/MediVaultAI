@@ -28,9 +28,9 @@ const ReportDetailView = () => {
   const navigate = useNavigate();
 
   const [report, setReport] = useState(null);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     fetchReportDetails();
@@ -39,17 +39,8 @@ const ReportDetailView = () => {
   const fetchReportDetails = async () => {
     setLoading(true);
     try {
-      // Fetch report details
       const reportRes = await api.get(`/reports/${id}`);
       setReport(reportRes.data.report);
-
-      // Fetch report stats (if endpoint exists)
-      try {
-        const statsRes = await api.get(`/reports/${id}/stats`);
-        setStats(statsRes.data.stats);
-      } catch (err) {
-        console.log("Stats not available");
-      }
     } catch (error) {
       toast.error("Failed to load report");
       console.error(error);
@@ -58,14 +49,40 @@ const ReportDetailView = () => {
     }
   };
 
+  // âœ… FIXED: Proper download using blob
   const handleDownload = async () => {
     try {
+      setDownloading(true);
       toast.loading("Preparing download...", { id: "download" });
+
+      // Get download URL from backend
       const { data } = await api.get(`/reports/${id}/download`);
-      window.open(data.file.url, "_blank");
-      toast.success("Opening file...", { id: "download" });
+
+      // Fetch the file as blob (this enables actual download)
+      const response = await fetch(data.file.url);
+      if (!response.ok) throw new Error("Failed to fetch file");
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Create and trigger download link
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = data.file.fileName || "report.jpg";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Cleanup blob URL
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+
+      toast.success("Download started!", { id: "download" });
     } catch (error) {
+      console.error("Download error:", error);
       toast.error("Failed to download report", { id: "download" });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -92,8 +109,8 @@ const ReportDetailView = () => {
   const StatusBadge = ({ status, isAnalyzed }) => {
     if (isAnalyzed) {
       return (
-        <span className="px-4 py-2 rounded-full text-sm font-bold bg-green-500 text-white flex items-center gap-2">
-          <CheckCircle2 size={16} />
+        <span className="px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold bg-green-500 text-white flex items-center gap-1.5 md:gap-2">
+          <CheckCircle2 size={14} className="md:w-4 md:h-4" />
           Analyzed
         </span>
       );
@@ -102,17 +119,17 @@ const ReportDetailView = () => {
     const statusConfig = {
       Processing: {
         color: "bg-yellow-500",
-        icon: <Clock size={16} />,
+        icon: <Clock size={14} className="md:w-4 md:h-4" />,
         text: "Processing",
       },
       Failed: {
         color: "bg-red-500",
-        icon: <XCircle size={16} />,
+        icon: <XCircle size={14} className="md:w-4 md:h-4" />,
         text: "Failed",
       },
       Uploaded: {
         color: "bg-blue-500",
-        icon: <FileText size={16} />,
+        icon: <FileText size={14} className="md:w-4 md:h-4" />,
         text: "Ready",
       },
     };
@@ -121,7 +138,7 @@ const ReportDetailView = () => {
 
     return (
       <span
-        className={`px-4 py-2 rounded-full text-sm font-bold ${config.color} text-white flex items-center gap-2`}
+        className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-bold ${config.color} text-white flex items-center gap-1.5 md:gap-2`}
       >
         {config.icon}
         {config.text}
@@ -145,14 +162,14 @@ const ReportDetailView = () => {
 
   if (!report) {
     return (
-      <div className="text-center py-20">
-        <AlertCircle className="text-red-500 mx-auto mb-4" size={64} />
+      <div className="text-center py-20 px-4">
+        <AlertCircle className="text-red-500 mx-auto mb-4" size={48} />
         <h3 className="text-xl font-bold text-gray-800 mb-2">
           Report Not Found
         </h3>
         <button
           onClick={() => navigate(-1)}
-          className="text-teal-600 hover:underline"
+          className="text-teal-600 hover:underline cursor-pointer"
         >
           Go back
         </button>
@@ -161,58 +178,65 @@ const ReportDetailView = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 p-3 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 md:mb-6">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition cursor-pointer"
             >
               <ArrowLeft size={20} />
               <span>Back</span>
             </button>
 
-            <div className="flex gap-3">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               {report.aiAnalysis?.isAnalyzed && (
                 <Link
                   to={`/analysis/${report._id}`}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl transition flex items-center gap-2 font-semibold"
+                  className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg md:rounded-xl transition flex items-center justify-center gap-2 font-semibold text-sm"
                 >
-                  <Eye size={18} />
-                  View Analysis
+                  <Eye size={16} />
+                  <span className="hidden sm:inline">View Analysis</span>
+                  <span className="sm:hidden">Analysis</span>
                 </Link>
               )}
               <button
                 onClick={handleDownload}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition flex items-center gap-2 font-semibold"
+                disabled={downloading}
+                className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg md:rounded-xl transition flex items-center justify-center gap-2 font-semibold text-sm disabled:opacity-50 cursor-pointer"
               >
-                <Download size={18} />
+                {downloading ? (
+                  <Loader className="animate-spin" size={16} />
+                ) : (
+                  <Download size={16} />
+                )}
                 Download
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition flex items-center gap-2 font-semibold disabled:opacity-50"
+                className="px-3 md:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg md:rounded-xl transition flex items-center justify-center gap-2 font-semibold text-sm disabled:opacity-50 cursor-pointer"
               >
                 {deleting ? (
-                  <Loader className="animate-spin" size={18} />
+                  <Loader className="animate-spin" size={16} />
                 ) : (
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
                 )}
-                Delete
+                <span className="hidden sm:inline">Delete</span>
               </button>
             </div>
           </div>
 
           {/* Report Title & Status */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
                 {report.reportType}
               </h1>
-              <p className="text-gray-500">
+              <p className="text-sm md:text-base text-gray-500">
                 Uploaded on{" "}
                 {new Date(report.createdAt).toLocaleDateString("en-US", {
                   year: "numeric",
@@ -228,27 +252,27 @@ const ReportDetailView = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Report Image */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                  <FileText size={24} className="text-teal-600" />
-                  Report Document
+                <h2 className="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <FileText size={20} className="text-teal-600 md:w-6 md:h-6" />
+                  <span className="text-base md:text-xl">Report Document</span>
                 </h2>
                 <button
                   onClick={openImageInNewTab}
-                  className="flex items-center gap-2 text-teal-600 hover:text-teal-700 font-medium text-sm"
+                  className="flex items-center gap-1.5 text-teal-600 hover:text-teal-700 font-medium text-xs md:text-sm cursor-pointer"
                 >
-                  <ExternalLink size={16} />
-                  Open in New Tab
+                  <ExternalLink size={14} />
+                  <span className="hidden sm:inline">Open in New Tab</span>
                 </button>
               </div>
 
               <div
                 onClick={openImageInNewTab}
-                className="relative rounded-xl overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-teal-500 transition group"
+                className="relative rounded-lg md:rounded-xl overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-teal-500 transition group"
               >
                 <img
                   src={report.reportFile.url}
@@ -256,27 +280,31 @@ const ReportDetailView = () => {
                   className="w-full h-auto object-contain bg-gray-50"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="bg-white/90 px-4 py-2 rounded-lg flex items-center gap-2">
-                    <ExternalLink size={18} />
-                    <span className="font-medium">
-                      Click to open in new tab
+                  <div className="bg-white/90 px-3 md:px-4 py-2 rounded-lg flex items-center gap-2">
+                    <ExternalLink size={16} />
+                    <span className="font-medium text-sm md:text-base">
+                      Click to open
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* File Info */}
-              <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="mt-4 p-3 md:p-4 bg-gray-50 rounded-lg md:rounded-xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 text-sm">
                   <div>
-                    <p className="text-gray-500">File Name</p>
-                    <p className="font-medium text-gray-900 truncate">
+                    <p className="text-gray-500 text-xs md:text-sm">
+                      File Name
+                    </p>
+                    <p className="font-medium text-gray-900 truncate text-sm md:text-base">
                       {report.reportFile.fileName}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">File Size</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-gray-500 text-xs md:text-sm">
+                      File Size
+                    </p>
+                    <p className="font-medium text-gray-900 text-sm md:text-base">
                       {(report.reportFile.fileSize / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
@@ -286,19 +314,19 @@ const ReportDetailView = () => {
           </div>
 
           {/* Report Details */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Patient Info */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <User size={20} className="text-teal-600" />
+            <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+              <h3 className="text-base md:text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <User size={18} className="text-teal-600 md:w-5 md:h-5" />
                 Patient Information
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3 pb-3 border-b">
-                  <User className="text-gray-400 mt-1" size={18} />
-                  <div className="flex-1">
+                  <User className="text-gray-400 mt-1" size={16} />
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-500">Name</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm md:text-base truncate">
                       {report.familyMemberId.name}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
@@ -307,29 +335,29 @@ const ReportDetailView = () => {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 pb-3 border-b">
-                  <Calendar className="text-gray-400 mt-1" size={18} />
+                  <Calendar className="text-gray-400 mt-1" size={16} />
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">Age</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm md:text-base">
                       {report.familyMemberId.age} years
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 pb-3 border-b">
-                  <Activity className="text-gray-400 mt-1" size={18} />
+                  <Activity className="text-gray-400 mt-1" size={16} />
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">Gender</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm md:text-base">
                       {report.familyMemberId.gender}
                     </p>
                   </div>
                 </div>
                 {report.familyMemberId.bloodGroup && (
                   <div className="flex items-start gap-3 pb-3 border-b">
-                    <Droplet className="text-red-400 mt-1" size={18} />
+                    <Droplet className="text-red-400 mt-1" size={16} />
                     <div className="flex-1">
                       <p className="text-xs text-gray-500">Blood Group</p>
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-gray-900 text-sm md:text-base">
                         {report.familyMemberId.bloodGroup}
                       </p>
                     </div>
@@ -337,10 +365,10 @@ const ReportDetailView = () => {
                 )}
                 {report.familyMemberId.emergencyContact && (
                   <div className="flex items-start gap-3">
-                    <Phone className="text-gray-400 mt-1" size={18} />
-                    <div className="flex-1">
+                    <Phone className="text-gray-400 mt-1" size={16} />
+                    <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-500">Emergency Contact</p>
-                      <p className="font-semibold text-gray-900 text-sm">
+                      <p className="font-semibold text-gray-900 text-sm break-all">
                         {report.familyMemberId.emergencyContact}
                       </p>
                     </div>
@@ -350,17 +378,17 @@ const ReportDetailView = () => {
             </div>
 
             {/* Report Details */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <FileText size={20} className="text-teal-600" />
+            <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+              <h3 className="text-base md:text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <FileText size={18} className="text-teal-600 md:w-5 md:h-5" />
                 Report Details
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3 pb-3 border-b">
-                  <Calendar className="text-gray-400 mt-1" size={18} />
+                  <Calendar className="text-gray-400 mt-1" size={16} />
                   <div className="flex-1">
                     <p className="text-xs text-gray-500">Report Date</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm md:text-base">
                       {new Date(report.reportDate).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "long",
@@ -371,10 +399,10 @@ const ReportDetailView = () => {
                 </div>
                 {report.hospitalName && (
                   <div className="flex items-start gap-3 pb-3 border-b">
-                    <Building2 className="text-gray-400 mt-1" size={18} />
-                    <div className="flex-1">
+                    <Building2 className="text-gray-400 mt-1" size={16} />
+                    <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-500">Hospital</p>
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-gray-900 text-sm md:text-base break-words">
                         {report.hospitalName}
                       </p>
                     </div>
@@ -382,10 +410,10 @@ const ReportDetailView = () => {
                 )}
                 {report.doctorName && (
                   <div className="flex items-start gap-3 pb-3 border-b">
-                    <User className="text-gray-400 mt-1" size={18} />
-                    <div className="flex-1">
+                    <User className="text-gray-400 mt-1" size={16} />
+                    <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-500">Doctor</p>
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-gray-900 text-sm md:text-base break-words">
                         Dr. {report.doctorName}
                       </p>
                     </div>
@@ -393,10 +421,10 @@ const ReportDetailView = () => {
                 )}
                 {report.notes && (
                   <div className="flex items-start gap-3">
-                    <FileText className="text-gray-400 mt-1" size={18} />
+                    <FileText className="text-gray-400 mt-1" size={16} />
                     <div className="flex-1">
                       <p className="text-xs text-gray-500">Notes</p>
-                      <p className="text-sm text-gray-700 mt-1">
+                      <p className="text-sm text-gray-700 mt-1 break-words">
                         {report.notes}
                       </p>
                     </div>
@@ -405,12 +433,12 @@ const ReportDetailView = () => {
               </div>
             </div>
 
-            {/* Alerts */}
+            {/* Health Alerts */}
             {(report.familyMemberId.allergies?.length > 0 ||
               report.familyMemberId.chronicConditions?.length > 0) && (
-              <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl border border-orange-200 p-6">
-                <h3 className="text-lg font-bold text-orange-900 mb-4 flex items-center gap-2">
-                  <AlertTriangle size={20} />
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl md:rounded-2xl border border-orange-200 p-4 md:p-6">
+                <h3 className="text-base md:text-lg font-bold text-orange-900 mb-4 flex items-center gap-2">
+                  <AlertTriangle size={18} className="md:w-5 md:h-5" />
                   Health Alerts
                 </h3>
                 {report.familyMemberId.allergies?.length > 0 && (
@@ -422,7 +450,7 @@ const ReportDetailView = () => {
                       {report.familyMemberId.allergies.map((allergy, i) => (
                         <span
                           key={i}
-                          className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium"
+                          className="px-2.5 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium"
                         >
                           {allergy}
                         </span>
@@ -440,7 +468,7 @@ const ReportDetailView = () => {
                         (condition, i) => (
                           <span
                             key={i}
-                            className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium"
+                            className="px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium"
                           >
                             {condition}
                           </span>
@@ -449,29 +477,6 @@ const ReportDetailView = () => {
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Stats */}
-            {stats && (
-              <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-2xl border border-teal-200 p-6">
-                <h3 className="text-lg font-bold text-teal-900 mb-4">
-                  Statistics
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-teal-700">Total Views</span>
-                    <span className="font-bold text-teal-900">
-                      {stats.views || 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-teal-700">Downloads</span>
-                    <span className="font-bold text-teal-900">
-                      {stats.downloads || 0}
-                    </span>
-                  </div>
-                </div>
               </div>
             )}
           </div>

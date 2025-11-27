@@ -1,4 +1,3 @@
-// controllers/analysisController.js - FIXED
 import MedicalReport from "../models/MedicalReport.js";
 import FamilyMember from "../models/FamilyMembers.js";
 import User from "../models/User.js";
@@ -17,15 +16,13 @@ import {
 } from "../services/emailService.js";
 import { generateAnalysisPDF } from "../services/pdfService.js";
 
-// Analyze a specific report - FIXED
 export const analyzeReport = async (req, res) => {
   try {
     const userId = req.userId;
     const { id } = req.params;
-    // FIXED: Handle undefined body
     const sendEmail = req.body?.sendEmail || false;
 
-    console.log("🔍 Starting analysis for report:", id);
+    console.log("Starting analysis for report:", id);
 
     // Get report with family member
     const report = await MedicalReport.findOne({ _id: id, userId }).populate(
@@ -57,7 +54,7 @@ export const analyzeReport = async (req, res) => {
 
       // STEP 1: Extract text if needed
       if (!extractedText || extractedText.length < 50) {
-        console.log("📄 Extracting text from file...");
+        console.log("Extracting text from file...");
 
         try {
           extractedText = await extractTextFromFile(
@@ -72,9 +69,9 @@ export const analyzeReport = async (req, res) => {
           report.extractedText = extractedText;
           await report.save();
 
-          console.log("✅ Text extracted and saved");
+          console.log("Text extracted and saved");
         } catch (extractError) {
-          console.error("❌ Text extraction failed:", extractError);
+          console.error("Text extraction failed:", extractError);
           report.status = "Failed";
           await report.save();
 
@@ -84,7 +81,7 @@ export const analyzeReport = async (req, res) => {
           });
         }
       } else {
-        console.log("✅ Using existing extracted text");
+        console.log("Using existing extracted text");
       }
 
       // Validate extracted text
@@ -103,17 +100,17 @@ export const analyzeReport = async (req, res) => {
         chronicConditions: familyMember.chronicConditions || [],
       };
 
-      console.log("👤 Patient info prepared:", patientInfo.name);
+      console.log("Patient info prepared:", patientInfo.name);
 
       // STEP 3: Analyze with Gemini AI
-      console.log("🤖 Starting AI analysis...");
+      console.log("Starting AI analysis...");
       const analysis = await analyzeReportWithGemini(
         extractedText,
         patientInfo,
         report.reportType
       );
 
-      console.log("✅ AI analysis completed");
+      console.log("AI analysis completed");
 
       // STEP 4: Update report with analysis
       report.aiAnalysis = analysis;
@@ -123,7 +120,7 @@ export const analyzeReport = async (req, res) => {
       // STEP 5: Send email if requested
       if (sendEmail) {
         try {
-          console.log("📧 Sending email...");
+          console.log("Sending email...");
           const user = await User.findById(userId);
 
           const analysisData = {
@@ -146,14 +143,13 @@ export const analyzeReport = async (req, res) => {
           };
 
           await sendAnalysisEmail(user.email, user.name, analysisData);
-          console.log("✅ Email sent successfully");
+          console.log("Email sent successfully");
         } catch (emailError) {
-          console.error("⚠️ Email sending failed:", emailError);
-          // Don't fail the analysis if email fails
+          console.error("Email sending failed:", emailError);
         }
       }
 
-      console.log("🎉 Analysis completed successfully");
+      console.log("Analysis completed successfully");
 
       return res.status(200).json({
         success: true,
@@ -167,7 +163,7 @@ export const analyzeReport = async (req, res) => {
         },
       });
     } catch (analysisError) {
-      console.error("❌ Analysis error:", analysisError);
+      console.error("Analysis error:", analysisError);
 
       // Update status to failed
       report.status = "Failed";
@@ -176,7 +172,7 @@ export const analyzeReport = async (req, res) => {
       throw analysisError;
     }
   } catch (error) {
-    console.error("❌ Analyze report error:", error);
+    console.error("Analyze report error:", error);
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to analyze report",
@@ -520,7 +516,7 @@ export const sendAnalysisEmailController = async (req, res) => {
     const userId = req.userId;
     const { id } = req.params;
 
-    console.log("📧 Sending analysis email for report:", id);
+    console.log("Sending analysis email for report:", id);
 
     // Get report with family member
     const report = await MedicalReport.findOne({ _id: id, userId }).populate(
@@ -576,14 +572,14 @@ export const sendAnalysisEmailController = async (req, res) => {
     // Send email with PDF attachment
     await sendAnalysisEmail(user.email, user.name, analysisData);
 
-    console.log("✅ Email sent successfully to:", user.email);
+    console.log("Email sent successfully to:", user.email);
 
     return res.status(200).json({
       success: true,
       message: "Analysis sent to your email successfully",
     });
   } catch (error) {
-    console.error("❌ Send email error:", error);
+    console.error("Send email error:", error);
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to send email",

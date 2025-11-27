@@ -46,6 +46,7 @@ client/.turbo/
 # Temporary folders
 tmp/
 temp/
+eng.traineddata
 
 # Optional: lock files (if you want)
 # package-lock.json

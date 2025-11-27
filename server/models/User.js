@@ -33,26 +33,11 @@ const userSchema = new mongoose.Schema(
     city: { type: String, default: "" },
     state: { type: String, default: "" },
     country: { type: String, default: "" },
-    zipCode: { type: String, default: "" },
-
-    // Emergency Contact
-    emergencyContact: {
-      name: { type: String, default: "" },
-      relationship: { type: String, default: "" },
-      phone: { type: String, default: "" },
-    },
 
     // Profile Picture
     profilePicture: {
       url: { type: String, default: "" },
       publicId: { type: String, default: "" },
-    },
-
-    // Preferences
-    notifications: {
-      email: { type: Boolean, default: true },
-      sms: { type: Boolean, default: false },
-      reportAnalysis: { type: Boolean, default: true },
     },
 
     // Account Status

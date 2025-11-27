@@ -111,10 +111,36 @@ const MemberReports = () => {
 
   const handleDownload = async (reportId, fileName) => {
     try {
+      toast.loading("Preparing download...", { id: "download" });
+
+      // Get the download URL from backend
       const { data } = await api.get(`/reports/${reportId}/download`);
-      window.open(data.file.url, "_blank");
+
+      // Fetch the file as blob (this allows actual download)
+      const response = await fetch(data.file.url);
+      if (!response.ok) throw new Error("Failed to fetch file");
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Create download link
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName || "medical-report.jpg";
+      link.style.display = "none";
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Cleanup
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+
+      toast.success("Download started!", { id: "download" });
     } catch (error) {
-      toast.error("Failed to download report");
+      console.error("Download error:", error);
+      toast.error("Failed to download report", { id: "download" });
     }
   };
 
