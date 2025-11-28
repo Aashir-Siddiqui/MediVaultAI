@@ -1,123 +1,65 @@
 # 🚀 MediVaultAI – Smart Medical Report Management System
 
 📢 **LinkedIn Post About This Project:**  
-👉 [View the LinkedIn Announcement](YOUR_LINKEDIN_POST_URL)
+👉 [View the LinkedIn Announcement](https://www.linkedin.com/posts/aashir-siddiqui-88a676394_medivaultai-healthcareinnovation-ai-activity-7400170217194102784-TbUH?utm_source=share&utm_medium=member_desktop&rcm=ACoAAGDrLGoBeEuEu1gaDjIXZ9HNcEuQYxa-IYY)
 
-MediVaultAI is a modern digital solution designed to solve a very common healthcare problem:
-People forget to carry their medical reports when visiting hospitals, resulting in delays and repeated visits.
+MediVaultAI is a modern digital solution to a common healthcare problem:  
+People forget to carry their medical reports during hospital visits, causing delays and repeated checkups.
 
 This platform allows users to securely upload, store, analyze, download, and email medical reports with ease.
 
-⭐ Features
-🔐 Authentication & Security
+---
 
-User registration with email verification
+## ⭐ Features
 
-OTP-based email verification
+### 🔐 Authentication & Security
+- User registration with email verification
+- OTP-based email verification
+- Secure login with JWT
+- Forgot-password with OTP
+- Rate limiting + Helmet for security
+- Password hashing using Bcrypt
 
-Secure login with JWT
+### 👨‍👩‍👧 Family Member Management
+- Add unlimited family members
+- Maintain individual medical records
 
-Forgot-password with OTP
+### 📄 Medical Report Upload
+- Upload image reports
+- Cloud storage via Cloudinary
+- OCR text extraction using Tesseract.js
 
-Rate limiting + Helmet for security
+### 🤖 AI-Powered Report Analysis
+- Uses Gemini API to generate:
+  - Intelligent health summary
+  - Key findings
+  - Simple language interpretation
+  - Important recommendations
 
-Password hashing using Bcrypt
+### 📥 PDF Generation
+- Export analyzed reports as clean, formatted PDF using Puppeteer
 
-👨‍👩‍👧 Family Member Management
+### 📧 Email Integration
+- Send analyzed PDF report directly to email using Nodemailer
 
-Add unlimited family members
+### 🎨 Modern Frontend UI
+- React + Vite
+- Redux Toolkit for state management
+- Tailwind CSS
+- Smooth animations using Framer Motion
 
-Maintain individual medical records
+---
 
-📄 Medical Report Upload
+## 🛠️ Tech Stack
 
-Upload PDF and image reports
+**Frontend:** React.js, Redux Toolkit, Tailwind CSS, Lucide Icons, React Router DOM, Framer Motion, Axios, Vite  
+**Backend:** Node.js, Express.js, MongoDB & Mongoose, JWT, Zod, Nodemailer, Multer, Cloudinary, Puppeteer, Helmet, Rate Limiting, Tesseract.js, Gemini API  
 
-Cloud storage via Cloudinary
+---
 
-OCR text extraction using Tesseract.js
+## 📂 Project Structure
 
-🤖 AI-Powered Report Analysis
-
-Uses Gemini API to generate:
-
-Intelligent health summary
-
-Key findings
-
-Simple language interpretation
-
-Important recommendations
-
-📥 PDF Generation
-
-Export analyzed reports as clean, formatted PDF
-
-Generated using Puppeteer
-
-📧 Email Integration
-
-Send analyzed PDF report directly to the user’s email
-
-Powered by Nodemailer
-
-🎨 Modern Frontend UI
-
-Built with React + Vite
-
-Redux Toolkit state management
-
-Tailwind CSS for fast, responsive design
-
-Smooth animations using Framer Motion
-
-🛠️ Tech Stack
-Frontend
-
-React.js
-
-Redux Toolkit
-
-Tailwind CSS
-
-Lucide Icons
-
-React Router DOM
-
-Framer Motion
-
-Axios
-
-Vite
-
-Backend
-
-Node.js
-
-Express.js
-
-MongoDB & Mongoose
-
-JWT Authentication
-
-Zod Validation
-
-Nodemailer
-
-Multer
-
-Cloudinary
-
-Puppeteer
-
-Helmet
-
-Rate Limiting
-
-Tesseract.js (OCR)
-
-Gemini API
-
+```plaintext
 MediVaultAI/
 │
 ├── client/                         # Frontend (React + Vite)
@@ -127,59 +69,48 @@ MediVaultAI/
 │   │   ├── api/                    # Axios API services
 │   │   ├── assets/                 # Images, icons, static files
 │   │   ├── components/             # Reusable UI components
-│   │   ├── pages/                  # Application pages (Dashboard, Login, etc.)
+│   │   ├── pages/                  # App pages (Dashboard, Login, etc.)
 │   │   ├── store/                  # Redux Toolkit slices & store
 │   │   └── utils/                  # Helper functions
-│   │
 │   ├── App.css
 │   ├── App.jsx
 │   ├── index.css
 │   ├── main.jsx
-│   ├── eslint.config.js
-│   ├── index.html
 │   ├── package.json
-│   ├── package-lock.json
 │   └── vite.config.js
 │
 └── server/                         # Backend (Node + Express)
-    ├── config/                     # DB connection, cloudinary, environment setup
-    ├── controllers/                # All controller logic (auth, reports, users)
+    ├── config/                     # DB connection, Cloudinary, env setup
+    ├── controllers/                # Controller logic (auth, reports, users)
     ├── middleware/                 # Auth, error handling, rate limit, etc.
     ├── models/                     # Mongoose models (User, Family, Report)
-    ├── public/                     # Public static files (if any)
     ├── routes/                     # API routes
     ├── services/                   # Extra services (email, puppeteer, OCR, AI)
     ├── templates/                  # Email templates (HTML)
     ├── validators/                 # Zod schemas for validation
-    │
     ├── eng.traineddata             # Tesseract OCR trained model
-    ├── .env
-    ├── index.js                    # Server entry point
+    ├── .env                        # Environment variables
+    ├── index.js                     # Server entry point
     ├── package.json
-    ├── package-lock.json
     └── .gitignore
 
-
 🚀 Installation & Setup
-Clone the Repository
-git clone <https://github.com/Aashir-Siddiqui/MediVaultAI.git>
+
+git clone https://github.com/Aashir-Siddiqui/MediVaultAI.git
 cd MediVaultAI
 
-🔧 Backend Setup
 cd server
 npm install
 
+Environment Variables
+Create a .env file in server/:
 
-# -----------------------------------------
-# 🔗 Database & Server Configuration
-# -----------------------------------------
+# Database
 MONGO_URL=
 PORT=
 NODE_ENV=
 
-# -----------------------------------------
-# 🔐 Authentication & Security
-# -----------------------------------------
+# Authentication
 JWT_SECRET=
 SALT_ROUNDS=
 SESSION_SECRET=
@@ -187,50 +118,36 @@ SESSION_LIFETIME=
 COOKIE_NAME=
 COOKIE_EXPIRES=
 
-# -----------------------------------------
-# 🌐 Client URL
-# -----------------------------------------
+# Client URL
 CLIENT_URL=
 
-# -----------------------------------------
-# 📧 Email / SMTP Configuration
-# -----------------------------------------
+# SMTP / Email
 SMTP_HOST=
 SMTP_PORT=
 SMTP_USER=
 SMTP_PASS=
 SENDER_EMAIL=
 
-# -----------------------------------------
-# ☁️ Cloudinary Configuration (Image/File Storage)
-# -----------------------------------------
+# Cloudinary
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
-# -----------------------------------------
-# 📁 File Upload Limits
-# 10MB in bytes = 10 * 1024 * 1024
-# -----------------------------------------
-MAX_FILE_SIZE=
+# Upload Limits
+MAX_FILE_SIZE=10485760  # 10MB in bytes
 
-# -----------------------------------------
-# 🤖 Gemini AI API Key
-# -----------------------------------------
+# AI API
 GEMINI_API_KEY=
 
-
-
-Start backend:
-
+Start Backend
 npm start
 
-🎨 Frontend Setup
+Frontend Setup
 cd client
 npm install
 npm run dev
 
-📡 API Endpoints Overview
+📡 API Endpoints
 Method	Endpoint	Description
 POST	/auth/register	Register new user
 POST	/auth/verify	Verify email using OTP
@@ -241,10 +158,9 @@ POST	/report/upload	Upload medical report
 POST	/report/analyze	Analyze report using Gemini
 GET	/report/download/:id	Download analyzed PDF
 POST	/report/email/:id	Email the analyzed report
-🧭 Future Enhancements
 
+🧭 Future Enhancements
 AI-based disease risk prediction
 
 🤝 Contributing
-
 Feel free to submit issues or pull requests.
