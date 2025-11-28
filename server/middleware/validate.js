@@ -1,4 +1,3 @@
-// middleware/validate.js - ULTRA FIX
 import { ZodError } from "zod";
 
 export const validate = (schema) => (req, res, next) => {

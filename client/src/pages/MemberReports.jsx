@@ -329,7 +329,7 @@ const MemberReports = () => {
         </h3>
         <button
           onClick={() => navigate("/")}
-          className="text-teal-600 hover:underline"
+          className="text-teal-600 hover:underline cursor-pointer"
         >
           Go back to dashboard
         </button>
@@ -343,7 +343,7 @@ const MemberReports = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition cursor-pointer"
         >
           <ArrowLeft size={20} />
           <span>Back to Dashboard</span>
@@ -467,7 +467,7 @@ const MemberReports = () => {
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="px-5 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition flex items-center gap-2 font-medium justify-center"
+            className="px-5 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition flex items-center gap-2 font-medium justify-center cursor-pointer"
           >
             <Filter size={20} />
             Filters
@@ -487,7 +487,7 @@ const MemberReports = () => {
                 Report Type
               </label>
               <select
-                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white cursor-pointer"
                 value={filters.reportType}
                 onChange={(e) =>
                   setFilters({ ...filters, reportType: e.target.value })
@@ -512,7 +512,7 @@ const MemberReports = () => {
                 Status
               </label>
               <select
-                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white cursor-pointer"
                 value={filters.status}
                 onChange={(e) =>
                   setFilters({ ...filters, status: e.target.value })
@@ -531,7 +531,7 @@ const MemberReports = () => {
               </label>
               <input
                 type="date"
-                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
+                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none cursor-pointer"
                 value={filters.startDate}
                 onChange={(e) =>
                   setFilters({ ...filters, startDate: e.target.value })
@@ -544,7 +544,7 @@ const MemberReports = () => {
               </label>
               <input
                 type="date"
-                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
+                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none cursor-pointer"
                 value={filters.endDate}
                 onChange={(e) =>
                   setFilters({ ...filters, endDate: e.target.value })
@@ -683,7 +683,7 @@ const MemberReports = () => {
                 >
                   <button
                     onClick={() => handleEdit(report)}
-                    className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-sm font-medium text-gray-700 flex items-center justify-center gap-1"
+                    className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-sm font-medium cursor-pointer text-gray-700 flex items-center justify-center gap-1"
                     title="Edit Report"
                   >
                     <Edit size={14} />
@@ -693,7 +693,7 @@ const MemberReports = () => {
                     onClick={() =>
                       handleDownload(report._id, report.reportFile.fileName)
                     }
-                    className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-sm font-medium text-gray-700 flex items-center justify-center gap-1"
+                    className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-sm font-medium cursor-pointer text-gray-700 flex items-center justify-center gap-1"
                     title="Download"
                   >
                     <Download size={14} />
@@ -702,7 +702,7 @@ const MemberReports = () => {
                   <button
                     onClick={() => handleDelete(report._id, report.reportType)}
                     disabled={deleting === report._id}
-                    className="px-3 py-2 bg-red-50 hover:bg-red-100 rounded-lg transition disabled:opacity-50 flex items-center justify-center"
+                    className="px-3 py-2 bg-red-50 hover:bg-red-100 rounded-lg transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
                     title="Delete"
                   >
                     {deleting === report._id ? (
@@ -726,7 +726,7 @@ const MemberReports = () => {
               <h3 className="text-xl font-bold text-gray-800">Edit Report</h3>
               <button
                 onClick={() => setEditingReport(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 <X size={24} />
               </button>
@@ -801,7 +801,7 @@ const MemberReports = () => {
                 <button
                   onClick={handleSaveEdit}
                   disabled={saving}
-                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {saving ? (
                     <>
@@ -814,7 +814,7 @@ const MemberReports = () => {
                 </button>
                 <button
                   onClick={() => setEditingReport(null)}
-                  className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2.5 rounded-lg font-semibold transition"
+                  className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2.5 rounded-lg font-semibold transition cursor-pointer"
                 >
                   Cancel
                 </button>

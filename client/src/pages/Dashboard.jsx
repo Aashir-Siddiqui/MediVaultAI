@@ -266,7 +266,7 @@ const Dashboard = () => {
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl transition text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-teal-200 w-full sm:w-auto"
+            className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl transition text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-teal-200 w-full sm:w-auto cursor-pointer"
           >
             <Plus size={18} /> Add Member
           </button>
@@ -295,7 +295,7 @@ const Dashboard = () => {
             </p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl transition font-semibold inline-flex items-center gap-2"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl transition font-semibold inline-flex items-center gap-2 cursor-pointer"
             >
               <Plus size={20} /> Add First Member
             </button>
@@ -327,7 +327,7 @@ const Dashboard = () => {
                   <div className="absolute top-3 md:top-4 right-3 md:right-4 flex gap-2">
                     <button
                       onClick={() => setEditingMember(member)}
-                      className="w-8 h-8 md:w-9 md:h-9 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-lg flex items-center justify-center text-white transition"
+                      className="w-8 h-8 md:w-9 md:h-9 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-lg cursor-pointer flex items-center justify-center text-white transition"
                       title="Edit"
                     >
                       <Edit size={14} />
@@ -335,7 +335,7 @@ const Dashboard = () => {
                     <button
                       onClick={() => handleDelete(member._id, member.name)}
                       disabled={deletingId === member._id}
-                      className="w-8 h-8 md:w-9 md:h-9 bg-white/20 backdrop-blur-sm hover:bg-red-500 rounded-lg flex items-center justify-center text-white transition disabled:opacity-50"
+                      className="w-8 h-8 md:w-9 md:h-9 bg-white/20 backdrop-blur-sm hover:bg-red-500 rounded-lg flex items-center justify-center text-white transition disabled:opacity-50 cursor-pointer"
                       title="Delete"
                     >
                       {deletingId === member._id ? (
@@ -452,7 +452,7 @@ const Dashboard = () => {
                   {/* Action Button */}
                   <button
                     onClick={() => handleViewReports(member._id)}
-                    className="w-full bg-gradient-to-r from-gray-50 to-gray-100 hover:from-teal-50 hover:to-teal-100 text-gray-700 hover:text-teal-700 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-semibold transition-all border border-gray-200 hover:border-teal-200 flex items-center justify-center gap-2 group"
+                    className="w-full bg-gradient-to-r from-gray-50 to-gray-100 hover:from-teal-50 hover:to-teal-100 text-gray-700 hover:text-teal-700 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-semibold transition-all border border-gray-200 hover:border-teal-200 flex items-center justify-center gap-2 group cursor-pointer"
                   >
                     <FileText
                       size={16}
@@ -471,7 +471,7 @@ const Dashboard = () => {
             {/* Add New Card */}
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-dashed border-gray-300 rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center text-gray-400 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50/30 transition-all min-h-[350px] md:min-h-[400px] group"
+              className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-dashed border-gray-300 rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center text-gray-400 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50/30 transition-all min-h-[350px] md:min-h-[400px] group cursor-pointer"
             >
               <div className="w-14 h-14 md:w-16 md:h-16 bg-gray-200 group-hover:bg-teal-100 rounded-full flex items-center justify-center mb-3 md:mb-4 transition-all group-hover:scale-110">
                 <Plus

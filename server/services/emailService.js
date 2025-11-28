@@ -1,4 +1,3 @@
-// services/emailService.js
 import transporter from "../config/nodemailer.js";
 import { generateAnalysisPDF } from "./pdfService.js";
 import dotenv from "dotenv";

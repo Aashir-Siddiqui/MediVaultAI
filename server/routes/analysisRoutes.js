@@ -1,4 +1,3 @@
-// routes/analysisRoutes.js - COMPLETE WITH EMAIL ROUTE
 import express from "express";
 import authenticateUser from "../middleware/userAuth.js";
 import { validate } from "../middleware/validate.js";
@@ -14,7 +13,7 @@ import {
   downloadAnalysisPDF,
   generateMemberHealthSummary,
   askReportQuestion,
-  sendAnalysisEmailController, // NEW - Add this
+  sendAnalysisEmailController,
 } from "../controllers/analysisController.js";
 
 const analysisRouter = express.Router();
@@ -38,7 +37,7 @@ analysisRouter.get("/:id", getAnalysis);
 // Download analysis as PDF
 analysisRouter.get("/:id/pdf", downloadAnalysisPDF);
 
-// ✅ NEW: Send analysis to email
+// Send analysis to email
 analysisRouter.post("/:id/send-email", sendAnalysisEmailController);
 
 // Generate health summary for a family member

@@ -1,4 +1,3 @@
-// services/geminiService.js
 import { getGeminiModel, getGeminiVisionModel } from "../config/gemini.js";
 import fs from "fs";
 

@@ -1,4 +1,3 @@
-// controllers/reportController.js
 import MedicalReport from "../models/MedicalReport.js";
 import FamilyMember from "../models/FamilyMembers.js";
 import cloudinary from "../config/cloudinary.js";

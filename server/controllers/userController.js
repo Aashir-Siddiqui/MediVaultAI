@@ -56,8 +56,6 @@ export const updateProfile = async (req, res) => {
       city,
       state,
       country,
-      zipCode,
-      emergencyContact,
     } = req.body;
 
     const user = await User.findById(userId);
@@ -79,18 +77,6 @@ export const updateProfile = async (req, res) => {
     if (city !== undefined) user.city = city;
     if (state !== undefined) user.state = state;
     if (country !== undefined) user.country = country;
-    if (zipCode !== undefined) user.zipCode = zipCode;
-
-    if (emergencyContact !== undefined) {
-      user.emergencyContact = {
-        name: emergencyContact.name || user.emergencyContact?.name || "",
-        relationship:
-          emergencyContact.relationship ||
-          user.emergencyContact?.relationship ||
-          "",
-        phone: emergencyContact.phone || user.emergencyContact?.phone || "",
-      };
-    }
 
     await user.save();
 

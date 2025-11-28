@@ -1,4 +1,3 @@
-// validators/userSchema.js
 import { z } from "zod";
 
 const strongPasswordRegex =

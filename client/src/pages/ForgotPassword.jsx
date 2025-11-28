@@ -184,7 +184,7 @@ const ForgotPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-teal-600 text-white py-3.5 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg shadow-teal-200 flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-teal-600 cursor-pointer text-white py-3.5 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg shadow-teal-200 flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -221,7 +221,7 @@ const ForgotPassword = () => {
             <button
               type="submit"
               disabled={loading || otp.length !== 6}
-              className="w-full bg-teal-600 text-white py-3.5 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg shadow-teal-200 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full cursor-pointer bg-teal-600 text-white py-3.5 rounded-xl font-semibold hover:bg-teal-700 transition shadow-lg shadow-teal-200 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -239,7 +239,7 @@ const ForgotPassword = () => {
                 type="button"
                 onClick={handleResendOtp}
                 disabled={resending}
-                className="text-teal-600 hover:text-teal-700 text-sm font-medium flex items-center justify-center gap-2 mx-auto transition disabled:opacity-50"
+                className="text-teal-600 cursor-pointer hover:text-teal-700 text-sm font-medium flex items-center justify-center gap-2 mx-auto transition disabled:opacity-50"
               >
                 {resending ? (
                   <>
@@ -261,7 +261,7 @@ const ForgotPassword = () => {
                 setStep(1);
                 setOtp("");
               }}
-              className="w-full text-gray-600 text-sm hover:text-gray-800 transition"
+              className="w-full text-gray-600 cursor-pointer text-sm hover:text-gray-800 transition"
             >
               ← Change Email
             </button>
@@ -339,7 +339,7 @@ const ForgotPassword = () => {
         {/* Back to Login */}
         <button
           onClick={() => navigate("/login")}
-          className="w-full mt-6 text-gray-500 text-sm hover:text-gray-800 transition font-medium"
+          className="w-full mt-6 cursor-pointer text-gray-500 text-sm hover:text-gray-800 transition font-medium"
         >
           ← Back to Login
         </button>

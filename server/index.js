@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -46,15 +45,6 @@ app.use(
 // Serve static files
 app.use("/uploads", express.static("public/uploads"));
 app.use("/temp", express.static("public/temp"));
-
-// Health check route
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    message: "Server is running",
-    timestamp: new Date().toISOString(),
-  });
-});
 
 // API routes
 app.use("/api/auth", authRouter);

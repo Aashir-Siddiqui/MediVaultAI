@@ -1,4 +1,3 @@
-// validators/authSchema.js
 import { z } from "zod";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

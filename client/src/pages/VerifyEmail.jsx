@@ -133,7 +133,7 @@ const VerifyEmail = () => {
             <button
               type="submit"
               disabled={loading || otp.length !== 6}
-              className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3.5 rounded-xl transition shadow-lg shadow-teal-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3.5 rounded-xl transition shadow-lg shadow-teal-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -157,7 +157,7 @@ const VerifyEmail = () => {
             <button
               onClick={handleResend}
               disabled={resending || countdown > 0}
-              className="text-teal-600 hover:text-teal-700 text-sm font-medium flex items-center justify-center gap-2 mx-auto transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer text-teal-600 hover:text-teal-700 text-sm font-medium flex items-center justify-center gap-2 mx-auto transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {resending ? (
                 <>
@@ -182,7 +182,7 @@ const VerifyEmail = () => {
           <div className="mt-8 pt-6 border-t border-gray-100">
             <button
               onClick={() => navigate("/register")}
-              className="w-full text-gray-500 text-sm hover:text-gray-800 transition font-medium"
+              className="cursor-pointer w-full text-gray-500 text-sm hover:text-gray-800 transition font-medium"
             >
               ← Back to Registration
             </button>

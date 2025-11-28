@@ -1,4 +1,3 @@
-// templates/reportTemplate.js - ENHANCED VERSION
 export const generateReportHTML = (data) => {
   const {
     patientName,

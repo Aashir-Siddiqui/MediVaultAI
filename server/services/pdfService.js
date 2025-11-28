@@ -1,4 +1,3 @@
-// services/pdfService.js
 import puppeteer from "puppeteer";
 import { generateReportHTML } from "../templates/reportTemplate.js";
 import fs from "fs";

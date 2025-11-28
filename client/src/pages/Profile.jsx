@@ -1,4 +1,3 @@
-// Profile.jsx - FIXED VALIDATION & ADD DELETE ACCOUNT
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateLocalUser, logoutUser } from "../store/authSlice";
@@ -208,7 +207,7 @@ const Profile = () => {
       {/* Back Button */}
       <button
         onClick={() => navigate("/")}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition font-medium"
+        className="cursor-pointer flex items-center gap-2 text-gray-600 hover:text-gray-800 transition font-medium"
       >
         <ArrowLeft size={20} />
         <span>Back to Dashboard</span>
@@ -279,7 +278,7 @@ const Profile = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <button
               onClick={() => setActiveTab("details")}
-              className={`w-full text-left px-6 py-4 flex items-center gap-3 transition ${
+              className={`cursor-pointer w-full text-left px-6 py-4 flex items-center gap-3 transition ${
                 activeTab === "details"
                   ? "bg-teal-50 text-teal-700 font-semibold border-l-4 border-teal-600"
                   : "text-gray-600 hover:bg-gray-50"
@@ -289,7 +288,7 @@ const Profile = () => {
             </button>
             <button
               onClick={() => setActiveTab("password")}
-              className={`w-full text-left px-6 py-4 flex items-center gap-3 transition ${
+              className={`w-full cursor-pointer text-left px-6 py-4 flex items-center gap-3 transition ${
                 activeTab === "password"
                   ? "bg-teal-50 text-teal-700 font-semibold border-l-4 border-teal-600"
                   : "text-gray-600 hover:bg-gray-50"
@@ -299,7 +298,7 @@ const Profile = () => {
             </button>
             <button
               onClick={() => setActiveTab("danger")}
-              className={`w-full text-left px-6 py-4 flex items-center gap-3 transition ${
+              className={`w-full cursor-pointer text-left px-6 py-4 flex items-center gap-3 transition ${
                 activeTab === "danger"
                   ? "bg-red-50 text-red-700 font-semibold border-l-4 border-red-600"
                   : "text-gray-600 hover:bg-gray-50"
@@ -502,7 +501,7 @@ const Profile = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 disabled:opacity-70"
+                    className="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
                   >
                     {loading ? (
                       <>
@@ -588,7 +587,7 @@ const Profile = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full md:w-auto bg-gray-900 hover:bg-black text-white px-8 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 disabled:opacity-70"
+                    className="w-full md:w-auto bg-gray-900 hover:bg-black text-white px-8 py-3 rounded-xl font-semibold transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70"
                   >
                     {loading ? (
                       <>
@@ -630,7 +629,7 @@ const Profile = () => {
                   </p>
                   <button
                     onClick={() => setShowDeleteModal(true)}
-                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl font-semibold transition flex items-center gap-2"
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl font-semibold transition cursor-pointer flex items-center gap-2"
                   >
                     <Trash2 size={18} />
                     Delete My Account
@@ -702,7 +701,7 @@ const Profile = () => {
                 disabled={
                   deleting || !deletePassword || confirmDelete !== "DELETE"
                 }
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {deleting ? (
                   <>
@@ -722,7 +721,7 @@ const Profile = () => {
                   setDeletePassword("");
                   setConfirmDelete("");
                 }}
-                className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-semibold transition"
+                className="px-6 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-semibold transition"
               >
                 Cancel
               </button>

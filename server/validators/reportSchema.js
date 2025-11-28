@@ -1,4 +1,3 @@
-// validators/reportSchema.js
 import { z } from "zod";
 
 // Valid report types

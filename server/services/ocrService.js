@@ -1,4 +1,3 @@
-// services/ocrService.js
 import Tesseract from "tesseract.js";
 import fs from "fs";
 import https from "https";
